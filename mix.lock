@@ -1,0 +1,3 @@
+%{
+  "telemetry": {:hex, :telemetry, "0.1.0", "e473e8dc0cc9310b33b8a5a11d7ca46d99b09a2a6338792bea961441ecb03cf9", [:mix], [], "hexpm"},
+}
