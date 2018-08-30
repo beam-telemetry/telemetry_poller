@@ -8,6 +8,7 @@ defmodule Telemetry.Sampler.MixProject do
       elixir: "~> 1.4",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
+      preferred_cli_env: [docs: :docs],
       deps: deps()
     ]
   end
@@ -23,7 +24,8 @@ defmodule Telemetry.Sampler.MixProject do
 
   defp deps do
     [
-      {:telemetry, "~> 0.1.0"}
+      {:telemetry, "~> 0.1.0"},
+      {:ex_doc, "~> 0.19", only: :docs}
     ]
   end
 end
