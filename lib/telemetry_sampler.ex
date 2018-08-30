@@ -264,6 +264,7 @@ defmodule Telemetry.Sampler do
   @spec schedule_collection(collect_in_millis :: non_neg_integer()) :: :ok
   defp schedule_collection(collect_in_millis) do
     Process.send_after(self(), :collect, collect_in_millis)
+    :ok
   end
 
   @spec collect_measurements([measurement_spec()]) :: [
