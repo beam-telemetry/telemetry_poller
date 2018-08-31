@@ -9,10 +9,11 @@ defmodule Telemetry.SamplerTest do
     def single_value(value), do: value
 
     def single_sample(event, value, metadata),
-      do: Telemetry.Sampler.sample(event, value, metadata)
+      do: Telemetry.execute(event, value, metadata)
 
-    def multi_samples(events, value, metadata),
-      do: Enum.map(events, &Telemetry.Sampler.sample(&1, value, metadata))
+    def not_a_number(), do: :not_a_number
+
+    def raise(), do: raise("I'm raising because I can!")
   end
 
   test "sampler can be given a name" do
@@ -54,7 +55,7 @@ defmodule Telemetry.SamplerTest do
     end
   end
 
-  test "sampler can be given an MFA returning a single sample as measurement spec" do
+  test "sampler can be given an MFA dispatching a Telemetry event as measurement spec" do
     event = [:a, :test, :event]
     value = 1
     metadata = %{some: "metadata"}
@@ -64,20 +65,6 @@ defmodule Telemetry.SamplerTest do
     {:ok, _} = Sampler.start_link(measurements: [spec])
 
     assert_dispatched ^event, ^value, ^metadata
-  end
-
-  test "sampler can be given an MFA returning a list of samples as measurement spec" do
-    event1 = [:a, :first, :test, :event]
-    event2 = [:a, :second, :test, :event]
-    value = 1
-    metadata = %{some: "metadata"}
-    spec = {TestMeasure, :multi_samples, [[event1, event2], value, metadata]}
-
-    attach_to_many([event1, event2])
-    {:ok, _} = Sampler.start_link(measurements: [spec])
-
-    assert_dispatched ^event1, ^value, ^metadata
-    assert_dispatched ^event2, ^value, ^metadata
   end
 
   test "sampler can be given an event name and an MFA returning a number as measurement spec" do
@@ -109,7 +96,6 @@ defmodule Telemetry.SamplerTest do
   @tag :capture_log
   test "measurement spec is removed from sampler if it returns incorrect value" do
     invalid_specs = [
-      {TestMeasure, :not_a_sample, []},
       {[:a, :test, :event], {TestMeasure, :not_a_number, []}}
     ]
 

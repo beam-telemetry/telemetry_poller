@@ -8,17 +8,13 @@ defmodule Telemetry.Sampler do
   what event should be emitted once the mesured value is collected. There are two possible values
   for measurement spec:
 
-  1. An MFA tuple returning a single sample or a list of samples. Sample is an opaque data structure
-     which consists of event name, collected measurement value and event metadata. Samples can
-     be constructed using the `sample/3` function. Sampler will dispatch a `Telemetry` event
-     for each sample returned by the MFA invokation.
+  1. An MFA tuple which dispatches events using `Telemetry.execute/3` upon invokation;
   2. A tuple, where the first element is event name and the second element is an MFA returning a
      *number*. In this case, Sampler will dispatch an event with given name and value returned
      by the MFA invokation; event metadata will be always empty.
 
-  If the invokation of MFA returns an invalid value (i.e. it should return a sample but doesn't,
-  or it should return a number but doesn't), the spec is removed from the list and the error
-  is logged.
+  If the invokation of MFA returns an invalid value (i.e. it should return a number but doesn't),
+  the spec is removed from the list and the error is logged.
 
   ## Starting and stopping
 
@@ -58,10 +54,9 @@ defmodule Telemetry.Sampler do
           | {:measurements, [measurement_spec()]}
   @type period :: pos_integer()
   @type measurement_spec :: mfa() | {Telemetry.event_name(), mfa()}
-  @opaque sample() ::
-            {:sample, Telemetry.event_name(), Telemetry.event_value(), Telemetry.event_metadata()}
 
   ## API
+
   @doc """
   Returns a child specifiction for Sampler.
 
@@ -125,17 +120,6 @@ defmodule Telemetry.Sampler do
     GenServer.call(sampler, :get_specs)
   end
 
-  @doc """
-  Returns a single measurement sample.
-
-  This function should be used by measurement spec MFAs.
-  """
-  @spec sample(Telemetry.event_name(), Telemetry.event_value(), Telemetry.event_metadata()) ::
-          sample()
-  def sample(event, value, metadata) do
-    {:sample, event, value, metadata}
-  end
-
   ## GenServer callbacks
 
   @impl true
@@ -145,18 +129,15 @@ defmodule Telemetry.Sampler do
       period: Keyword.fetch!(options, :period)
     }
 
-    schedule_collection(0)
+    schedule_measurement(0)
     {:ok, state}
   end
 
   @impl true
   def handle_info(:collect, state) do
-    new_specs =
-      state.specs
-      |> collect_measurements()
-      |> dispatch_events_and_filter_misbehaving()
+    new_specs = make_measurements_and_filter_misbehaving(state.specs)
 
-    schedule_collection(state.period)
+    schedule_measurement(state.period)
     {:noreply, %{state | specs: new_specs}}
   end
 
@@ -218,122 +199,57 @@ defmodule Telemetry.Sampler do
   defp validate_period!(other),
     do: raise(ArgumentError, "Expected :period to be a postivie integer, got #{inspect(other)}")
 
-  @spec schedule_collection(collect_in_millis :: non_neg_integer()) :: :ok
-  defp schedule_collection(collect_in_millis) do
+  @spec schedule_measurement(collect_in_millis :: non_neg_integer()) :: :ok
+  defp schedule_measurement(collect_in_millis) do
     Process.send_after(self(), :collect, collect_in_millis)
     :ok
   end
 
-  @spec collect_measurements([measurement_spec()]) :: [
-          {measurement_spec(),
-           {:ok, term()} | {:error, Exception.kind(), reason :: term(), Exception.stacktrace()}}
-        ]
-  defp collect_measurements(specs) do
+  @spec make_measurements_and_filter_misbehaving([measurement_spec()]) :: [measurement_spec()]
+  defp make_measurements_and_filter_misbehaving(specs) do
     Enum.map(specs, fn spec ->
-      value = collect_measurement(spec)
-      {spec, value}
+      result = make_measurement(spec)
+      {spec, result}
     end)
-  end
-
-  @spec collect_measurement(measurement_spec()) ::
-          {:ok, term()} | {:error, Exception.kind(), reason :: term(), Exception.stacktrace()}
-  defp collect_measurement({_event, {_m, _f, _a} = mfa}) do
-    collect_measurement(mfa)
-  end
-
-  defp collect_measurement({m, f, a}) do
-    try do
-      {:ok, apply(m, f, a)}
-    catch
-      kind, reason ->
-        {:error, kind, reason, System.stacktrace()}
-    end
-  end
-
-  @spec dispatch_events_and_filter_misbehaving([
-          {measurement_spec(),
-           {:ok, term()} | {:error, Exception.kind(), reason :: term(), Exception.stacktrace()}}
-        ]) :: [measurement_spec()]
-  defp dispatch_events_and_filter_misbehaving(specs_with_values) do
-    specs_with_values
-    |> Enum.map(fn {spec, value} -> {spec, maybe_dispatch_events({spec, value})} end)
     |> Enum.filter(fn {_spec, ok_or_error} -> ok_or_error == :ok end)
     |> Enum.map(&elem(&1, 0))
   end
 
-  @spec maybe_dispatch_events(
-          {measurement_spec(),
-           {:ok, term()} | {:error, Exception.kind(), reason :: term(), Exception.stacktrace()}}
-        ) :: :ok | :error
-  defp maybe_dispatch_events({spec, {:error, kind, reason, stack}}) do
-    formatted_error = Exception.format(kind, reason, stack)
-
-    Logger.error("""
-    Failed to collect measurement defined by spec #{inspect(spec)}:
-    #{formatted_error}
-    """)
-
-    :error
-  end
-
-  defp maybe_dispatch_events({{_m, _f, _a} = spec, {:ok, sample_or_samples}}) do
-    case maybe_dispatch_samples(sample_or_samples) do
-      :ok ->
+  @spec make_measurement(measurement_spec()) :: :ok | :error
+  defp make_measurement({event, {m, f, a}} = measurement) do
+    case apply(m, f, a) do
+      result when is_number(result) ->
+        Telemetry.execute(event, result)
         :ok
 
-      {:error, reason} ->
+      result ->
         Logger.error(
-          "Failed to dispatch values returned by invoking spec #{inspect(spec)}: #{reason}"
+          "Expected an MFA defined by measurement #{inspect(measurement)} to return " <>
+            "a number, got #{inspect(result)}"
         )
 
         :error
     end
+  catch
+    kind, reason ->
+      Logger.error(
+        "Error when calling MFA defined by measurement #{inspect(measurement)}:\n" <>
+          "#{Exception.format(kind, reason, System.stacktrace())}"
+      )
+
+      :error
   end
 
-  defp maybe_dispatch_events({{event, {_m, _f, _a}}, {:ok, value}}) when is_number(value) do
-    sample = sample(event, value, %{})
-    :ok = maybe_dispatch_samples(sample)
-  end
+  defp make_measurement({m, f, a} = measurement) do
+    apply(m, f, a)
+    :ok
+  catch
+    kind, reason ->
+      Logger.error(
+        "Error when calling MFA defined by measurement #{inspect(measurement)}:\n" <>
+          "#{Exception.format(kind, reason, System.stacktrace())}"
+      )
 
-  defp maybe_dispatch_events({{_event, {_, _f, _a}} = spec, {:ok, other}}) do
-    Logger.error(
-      "Failed to dispatch the value returned by invoking spec #{inspect(spec)}: " <>
-        "expected a number, got #{inspect(other)}"
-    )
-
-    :error
-  end
-
-  @spec maybe_dispatch_samples(term()) :: :ok | {:error, String.t()}
-  defp maybe_dispatch_samples(maybe_samples) when is_list(maybe_samples) do
-    if Enum.all?(maybe_samples, &valid_sample?/1) do
-      for {:sample, event, value, metadata} <- maybe_samples do
-        Telemetry.execute(event, value, metadata)
-      end
-
-      :ok
-    else
-      {:error, "expected a list of samples, got #{inspect(maybe_samples)}"}
-    end
-  end
-
-  defp maybe_dispatch_samples(maybe_sample) do
-    if valid_sample?(maybe_sample) do
-      {:sample, event, value, metadata} = maybe_sample
-      Telemetry.execute(event, value, metadata)
-      :ok
-    else
-      {:error, "expected a sample, got #{inspect(maybe_sample)}"}
-    end
-  end
-
-  @spec valid_sample?(term()) :: boolean()
-  defp valid_sample?({:sample, event, value, metadata})
-       when is_list(event) and is_number(value) and is_map(metadata) do
-    true
-  end
-
-  defp valid_sample?(_) do
-    false
+      :error
   end
 end

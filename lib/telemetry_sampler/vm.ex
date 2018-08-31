@@ -21,7 +21,7 @@ defmodule Telemetry.Sampler.VM do
   def memory() do
     :erlang.memory()
     |> Enum.map(fn {type, size} ->
-      Sampler.sample([:vm, :memory], size, %{type: type})
+      Telemetry.execute([:vm, :memory], size, %{type: type})
     end)
   end
 end
