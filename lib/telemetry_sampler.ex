@@ -5,17 +5,14 @@ defmodule Telemetry.Sampler do
   ## Measurement specifications
 
   Measurement specifications (later "specs") describe how the measurement should be performed and
-  what event should be emitted once the mesured value is collected. There are three possible values
+  what event should be emitted once the mesured value is collected. There are two possible values
   for measurement spec:
 
   1. An MFA tuple returning a single sample or a list of samples. Sample is an opaque data structure
      which consists of event name, collected measurement value and event metadata. Samples can
      be constructed using the `sample/3` function. Sampler will dispatch a `Telemetry` event
      for each sample returned by the MFA invokation.
-  2. An atom representing a name of the function from `Telemetry.Sampler.VM` module. See documentation
-     for `Telemetry.Sampler.VM` module to learn about allowed values. Atom measurement spec is
-     equivalent to `{Telemetry.Sampler.VM, atom, []}` MFA spec.
-  3. A tuple, where the first element is event name and the second element is an MFA returning a
+  2. A tuple, where the first element is event name and the second element is an MFA returning a
      *number*. In this case, Sampler will dispatch an event with given name and value returned
      by the MFA invokation; event metadata will be always empty.
 
@@ -40,17 +37,12 @@ defmodule Telemetry.Sampler do
   You can start as many Samplers as you wish, but generally you shouldn't need to do it, unless
   you know that it's not keeping up with collecting all specified measurements.
 
-  By default Sampler starts with a set of measurement specs related to Erlang virtual machine.
-  Providing `:measurements` option overrides the default specs, although you can use the
-  `default_specs/0` function to keep the defaults and add your own measurements:
-
-      Telemetry.Sampler.start_link(
-          measurements: Telemetry.Sampler.default_specs() ++ [{MeasurementSpecs, :session_count, []}])
+  Measurement specs need to be provided via `:measurements` option.
 
   ## VM measurements
 
-  See documentation for `Telemetry.Sampler.VM` module to learn what VM metrics can be collected
-  by Sampler.
+  See `Telemetry.Sampler.VM` module for functions which can be used as measurement specs for
+  metrics related to the Erlang virtual machine.
   """
 
   use GenServer
@@ -66,7 +58,7 @@ defmodule Telemetry.Sampler do
           | {:period, period()}
           | {:measurements, [measurement_spec()]}
   @type period :: pos_integer()
-  @type measurement_spec :: atom() | mfa() | {Telemetry.event_name(), mfa()}
+  @type measurement_spec :: mfa() | {Telemetry.event_name(), mfa()}
   @opaque sample() ::
             {:sample, Telemetry.event_name(), Telemetry.event_value(), Telemetry.event_metadata()}
 
@@ -150,14 +142,6 @@ defmodule Telemetry.Sampler do
   end
 
   @doc """
-  Returns list of specs used by the Sampler by default.
-  """
-  @spec default_specs() :: [measurement_spec()]
-  def default_specs() do
-    [:memory]
-  end
-
-  @doc """
   Returns a single measurement sample.
 
   This function should be used by measurement spec MFAs.
@@ -202,7 +186,7 @@ defmodule Telemetry.Sampler do
   @spec parse_options!(list()) :: {Keyword.t(), Keyword.t()} | no_return()
   defp parse_options!(options) do
     gen_server_opts = Keyword.take(options, [:name])
-    measurement_specs = Keyword.get(options, :measurements, default_specs())
+    measurement_specs = Keyword.get(options, :measurements, [])
     validate_measurement_specs!(measurement_specs)
     period = Keyword.get(options, :period, @default_period)
     validate_period!(period)
@@ -239,20 +223,9 @@ defmodule Telemetry.Sampler do
           "Expected event name with MFA measurement spec, got #{inspect(invalid_spec)}"
   end
 
-  defp validate_measurement_spec!(vm_fun) when is_atom(vm_fun) do
-    case Code.ensure_loaded(Telemetry.Sampler.VM) do
-      {:module, _} ->
-        if function_exported?(Telemetry.Sampler.VM, vm_fun, 0) do
-          :ok
-        else
-          raise ArgumentError,
-                "Expected atom measurement spec to represent a function from " <>
-                  " #{inspect(Telemetry.Sampler.VM)} module, got #{inspect(vm_fun)}"
-        end
-
-      {:error, reason} ->
-        raise "Module #{inspect(Telemetry.Sampler.VM)} could not be loaded: #{inspect(reason)}"
-    end
+  defp validate_measurement_spec!(invalid_spec) do
+    raise ArgumentError,
+          "Expected measurement spec, got #{inspect(invalid_spec)}"
   end
 
   @spec validate_period!(term()) :: :ok | no_return()
@@ -280,10 +253,6 @@ defmodule Telemetry.Sampler do
 
   @spec collect_measurement(measurement_spec()) ::
           {:ok, term()} | {:error, Exception.kind(), reason :: term(), Exception.stacktrace()}
-  defp collect_measurement(vm_fun) when is_atom(vm_fun) do
-    collect_measurement({Telemetry.Sampler.VM, vm_fun, []})
-  end
-
   defp collect_measurement({_event, {_m, _f, _a} = mfa}) do
     collect_measurement(mfa)
   end
@@ -321,20 +290,6 @@ defmodule Telemetry.Sampler do
     """)
 
     :error
-  end
-
-  defp maybe_dispatch_events({vm_fun, {:ok, sample_or_samples}}) when is_atom(vm_fun) do
-    case maybe_dispatch_samples(sample_or_samples) do
-      :ok ->
-        :ok
-
-      {:error, reason} ->
-        Logger.error(
-          "Failed to dispatch values returned by invoking spec #{inspect(vm_fun)}: #{reason}"
-        )
-
-        :error
-    end
   end
 
   defp maybe_dispatch_events({{_m, _f, _a} = spec, {:ok, sample_or_samples}}) do

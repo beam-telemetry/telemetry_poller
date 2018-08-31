@@ -40,26 +40,17 @@ defmodule Telemetry.SamplerTest do
     assert_dispatched ^event, ^value, _
   end
 
-  test "sampler doesn't start if the given sampling period is not an integer" do
+  @tag :capture_log
+  test "sampler doesn't start given invalid measurement spec" do
     assert_raise ArgumentError, fn ->
-      Sampler.start(period: "not an integer")
+      Sampler.start(measurements: [:made_up_spec])
     end
   end
 
-  test "sampler can be given an atom corresponding to function from Telemetry.Sampler.VM module " <>
-         "as measurement spec" do
-    options = [measurements: [:memory]]
-    event = [:vm, :memory]
-
-    attach_to(event)
-    {:ok, _} = Sampler.start_link(options)
-
-    assert_dispatched ^event, _, _
-  end
-
-  test "sampler can't be given an atom which doesn't correspond to function from Telemetry.Sampler.VM module" do
+  @tag :capture_log
+  test "sampler doesn't start given invalid period" do
     assert_raise ArgumentError, fn ->
-      Sampler.start(measurements: [:made_up_function])
+      Sampler.start(period: "not a period")
     end
   end
 
@@ -102,7 +93,7 @@ defmodule Telemetry.SamplerTest do
   end
 
   test "sampler's measurement specs can be listed" do
-    spec1 = :memory
+    spec1 = {Telemetry.Sampler.VM, :memory, []}
     spec2 = {[:a, :first, :test, :event], {TestMeasure, :single_value, [1]}}
     spec3 = {TestMeasure, :single_sample, [[:a, :second, :test, :event], 1, %{}]}
 
@@ -136,13 +127,6 @@ defmodule Telemetry.SamplerTest do
     assert eventually(fn -> [] == Sampler.list_specs(sampler) end)
   end
 
-  test "sampler starts with default set of measurement specs" do
-    {:ok, sampler} = Sampler.start_link()
-
-    ## TODO: assert on default measurements
-    assert Sampler.default_specs() == Sampler.list_specs(sampler)
-  end
-
   test "sampler can be started without linking" do
     {:ok, pid} = Sampler.start()
 
@@ -152,7 +136,7 @@ defmodule Telemetry.SamplerTest do
   end
 
   test "sampler can be started under supervisor using the old-style child spec" do
-    specs = [:memory]
+    specs = [{Telemetry.Sampler.VM, :memory, []}]
     child_id = MySampler
     children = [Supervisor.Spec.worker(Sampler, [[measurements: specs]], id: child_id)]
 
@@ -164,7 +148,7 @@ defmodule Telemetry.SamplerTest do
 
   @tag :elixir_1_5_child_specs
   test "sampler can be started under supervisor using the new-style child spec" do
-    specs = [:memory]
+    specs = [{Telemetry.Sampler.VM, :memory, []}]
     child_id = MySampler
     children = [Supervisor.child_spec({Sampler, measurements: specs}, id: child_id)]
 
