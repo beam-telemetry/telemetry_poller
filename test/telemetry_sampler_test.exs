@@ -43,14 +43,14 @@ defmodule Telemetry.SamplerTest do
   @tag :capture_log
   test "sampler doesn't start given invalid measurement spec" do
     assert_raise ArgumentError, fn ->
-      Sampler.start(measurements: [:made_up_spec])
+      Sampler.start_link(measurements: [:made_up_spec])
     end
   end
 
   @tag :capture_log
   test "sampler doesn't start given invalid period" do
     assert_raise ArgumentError, fn ->
-      Sampler.start(period: "not a period")
+      Sampler.start_link(period: "not a period")
     end
   end
 
@@ -125,14 +125,6 @@ defmodule Telemetry.SamplerTest do
     {:ok, sampler} = Sampler.start_link(measurements: [invalid_spec])
 
     assert eventually(fn -> [] == Sampler.list_specs(sampler) end)
-  end
-
-  test "sampler can be started without linking" do
-    {:ok, pid} = Sampler.start()
-
-    assert {:links, []} == Process.info(self(), :links)
-
-    Sampler.stop(pid)
   end
 
   test "sampler can be started under supervisor using the old-style child spec" do

@@ -22,9 +22,8 @@ defmodule Telemetry.Sampler do
 
   ## Starting and stopping
 
-  You can start the Sampler using the `start/1` and `start_link/1` functions. Sampler can be alaso
-  started as a part of your supervision tree, using both the old-style and the new-style child
-  specifications:
+  You can start the Sampler using the `start_link/1` function. Sampler can be alaso started as a
+  part of your supervision tree, using both the old-style and the new-style child specifications:
 
       # pre Elixir 1.5.0
       children = [Supervisor.Spec.worker(Telemetry.Sampler, [[period: 5000]])]
@@ -110,17 +109,6 @@ defmodule Telemetry.Sampler do
   def start_link(options \\ []) when is_list(options) do
     {sampler_opts, gen_server_opts} = parse_options!(options)
     GenServer.start_link(__MODULE__, sampler_opts, gen_server_opts)
-  end
-
-  @doc """
-  Starts a Sampler process.
-
-  For description of possible options see documentation for `start_link/1`.
-  """
-  @spec start(options()) :: GenServer.on_start()
-  def start(options \\ []) when is_list(options) do
-    {sampler_opts, gen_server_opts} = parse_options!(options)
-    GenServer.start(__MODULE__, sampler_opts, gen_server_opts)
   end
 
   @doc """
