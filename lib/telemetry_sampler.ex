@@ -65,8 +65,8 @@ defmodule Telemetry.Sampler do
   @doc """
   Returns a child specifiction for Sampler.
 
-  It accepts `nil` or `t:options/0` as an argument, meaning that it's valid to start it under the
-  supervisor as follows:
+  It accepts `t:options/0` as an argument, meaning that it's valid to start it under the supervisor
+  as follows:
 
       alias Telemetry.Sampler
       # use default options
@@ -79,10 +79,6 @@ defmodule Telemetry.Sampler do
   # Uncomment when dropping support for 1.4.x releases.
   # @spec child_spec(term()) :: Supervisor.child_spec()
   def child_spec(term)
-
-  def child_spec(nil) do
-    child_spec([])
-  end
 
   def child_spec(options) do
     %{
