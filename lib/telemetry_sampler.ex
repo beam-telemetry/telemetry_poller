@@ -2,19 +2,17 @@ defmodule Telemetry.Sampler do
   @moduledoc """
   Allows to periodically collect measurements and publish them as `Telemetry` events.
 
-  ## Measurement specifications
+  Measurements can be described in two ways:
 
-  Measurement specifications (later "specs") describe how the measurement should be performed and
-  what event should be emitted once the mesured value is collected. There are two possible values
-  for measurement spec:
-
-  1. An MFA tuple which dispatches events using `Telemetry.execute/3` upon invokation;
-  2. A tuple, where the first element is event name and the second element is an MFA returning a
-     *number*. In this case, Sampler will dispatch an event with given name and value returned
+  1. As an MFA tuple which dispatches events using `Telemetry.execute/3` upon invokation;
+  2. As a tuple, where the first element is event name and the second element is an MFA returning a
+     **number**. In this case, Sampler will dispatch an event with given name and value returned
      by the MFA invokation; event metadata will be always empty.
 
   If the invokation of MFA returns an invalid value (i.e. it should return a number but doesn't),
-  the spec is removed from the list and the error is logged.
+  the measurement is removed from the list and the error is logged.
+
+  See the "Examples" section for more concrete examples.
 
   ## Starting and stopping
 
@@ -27,17 +25,76 @@ defmodule Telemetry.Sampler do
       # post Elixir 1.5.0
       children = [{Telemetry.Sampler, [period: 5000]}]
 
-      Supervisor.start_link(children, [strategy: :one_for_one]
+      Supervisor.start_link(children, [strategy: :one_for_one])
 
   You can start as many Samplers as you wish, but generally you shouldn't need to do it, unless
   you know that it's not keeping up with collecting all specified measurements.
 
-  Measurement specs need to be provided via `:measurements` option.
+  Measurements need to be provided via `:measurements` option.
 
   ## VM measurements
 
-  See `Telemetry.Sampler.VM` module for functions which can be used as measurement specs for
-  metrics related to the Erlang virtual machine.
+  See `Telemetry.Sampler.VM` module for functions which can be used as measurements for metrics
+  related to the Erlang virtual machine.
+
+  ## Examples
+
+  Let's imagine that you have a web application and you would like to periodically measure number
+  of active user sessions.
+
+      defmodule ExampleApp do
+        def session_count() do
+          # logic for calculating session count
+          ...
+        end
+      end
+
+  There are two ways in which you can hook this measurement up to a Sampler. The first approach is
+  to write your own dispatching function:
+
+      defmodule ExampleApp.Measurements do
+        def dispatch_session_count() do
+          Telemetry.execute([:example_app, :session_count], ExampleApp.session_count())
+        end
+      end
+
+  and tell the Sampler to invoke it periodically:
+
+      Telemetry.Sampler.start_link(measurements: [
+        {ExampleApp.Measurements, :dispatch_session_count, []}
+      ])
+
+  However, given that the event does not carry any metadata, it's easier to wire the
+  `ExampleApp.session_count/0` function directly:
+
+      Telemetry.Sampler.start_link(measurements: [
+        {[:example_app, :session_count], {ExampleApp, :session_count, []}}
+      ])
+
+  Both solutions are equivalent, but only because the event metadata is empty. If you find that you
+  need to somehow label the event values, e.g. differentiate between number of sessions of regular
+  and admin users, then only the first approach is a viable choice:
+
+      defmodule ExampleApp.Measurements do
+        def dispatch_session_count() do
+          regulars = ExampleApp.regular_users_session_count()
+          admins = ExampleApp.admin_users_session_count()
+          Telemetry.execute([:example_app, :session_count], regulars, %{role: :regular})
+          Telemetry.execute([:example_app, :session_count], admins, %{role: :admin})
+        end
+      end
+
+  > Note: the other solution would be to dispatch two different events by hooking up
+  > `ExampleApp.regular_users_session_count/0` and `ExampleApp.admin_users_session_count/0`
+  > functions directly. However, if you add more and more user roles to your app, you'll find
+  > yourself creating a new event for each one of them, which will force you to modify existing
+  > event handlers. If you can break down event value by some feature, like user role in this
+  > example, it's usually better to use event metadata than add new events.
+
+  This is a perfect use case for Sampler, because you don't need to write a dedicated process
+  which would call these functions periodically. Additionally, if you find that you need to collect
+  more statistics like this in the future, you can easily hook them up to the same Sampler process
+  and avoid creating lots of processes which would stay idle most of the time.
   """
 
   use GenServer
@@ -51,9 +108,9 @@ defmodule Telemetry.Sampler do
   @type option ::
           {:name, GenServer.name()}
           | {:period, period()}
-          | {:measurements, [measurement_spec()]}
+          | {:measurements, [measurement()]}
   @type period :: pos_integer()
-  @type measurement_spec :: mfa() | {Telemetry.event_name(), mfa()}
+  @type measurement() :: mfa() | {Telemetry.event_name(), mfa()}
 
   ## API
 
@@ -89,8 +146,8 @@ defmodule Telemetry.Sampler do
 
   ### Options
 
-  * `:measurements` - a list of measurements specs used by Sampler. For description of possible values
-    see "Measurement specifications" section of `Sampler` module documentation;
+  * `:measurements` - a list of measurements used by Sampler. For description of possible values
+    see `Telemetry.Sampler` module documentation;
   * `:period` - time period before performing the same measurement again, in milliseconds. Default
     value is #{@default_period} ms;
   * `:name` - the name of the Sampler process. See "Name Registragion" section of `GenServer`
@@ -113,11 +170,11 @@ defmodule Telemetry.Sampler do
   end
 
   @doc """
-  Returns a list of measurement specs used by the sampler.
+  Returns a list of measurements used by the sampler.
   """
-  @spec list_specs(t()) :: [measurement_spec()]
-  def list_specs(sampler) do
-    GenServer.call(sampler, :get_specs)
+  @spec list_measurements(t()) :: [measurement()]
+  def list_measurements(sampler) do
+    GenServer.call(sampler, :get_measurements)
   end
 
   ## GenServer callbacks
@@ -125,7 +182,7 @@ defmodule Telemetry.Sampler do
   @impl true
   def init(options) do
     state = %{
-      specs: Keyword.fetch!(options, :measurements),
+      measurements: Keyword.fetch!(options, :measurements),
       period: Keyword.fetch!(options, :period)
     }
 
@@ -135,15 +192,15 @@ defmodule Telemetry.Sampler do
 
   @impl true
   def handle_info(:collect, state) do
-    new_specs = make_measurements_and_filter_misbehaving(state.specs)
+    new_measurements = make_measurements_and_filter_misbehaving(state.measurements)
 
     schedule_measurement(state.period)
-    {:noreply, %{state | specs: new_specs}}
+    {:noreply, %{state | measurements: new_measurements}}
   end
 
   @impl true
-  def handle_call(:get_specs, _, state) do
-    {:reply, state.specs, state}
+  def handle_call(:get_measurements, _, state) do
+    {:reply, state.measurements, state}
   end
 
   ## Helpers
@@ -151,46 +208,46 @@ defmodule Telemetry.Sampler do
   @spec parse_options!(list()) :: {Keyword.t(), Keyword.t()} | no_return()
   defp parse_options!(options) do
     gen_server_opts = Keyword.take(options, [:name])
-    measurement_specs = Keyword.get(options, :measurements, [])
-    validate_measurement_specs!(measurement_specs)
+    measurements = Keyword.get(options, :measurements, [])
+    validate_measurements!(measurements)
     period = Keyword.get(options, :period, @default_period)
     validate_period!(period)
-    {[measurements: measurement_specs, period: period], gen_server_opts}
+    {[measurements: measurements, period: period], gen_server_opts}
   end
 
-  @spec validate_measurement_specs!(term()) :: :ok | no_return()
-  defp validate_measurement_specs!(measurement_specs) when is_list(measurement_specs) do
-    Enum.each(measurement_specs, &validate_measurement_spec!/1)
+  @spec validate_measurements!(term()) :: :ok | no_return()
+  defp validate_measurements!(measurements) when is_list(measurements) do
+    Enum.each(measurements, &validate_measurement!/1)
     :ok
   end
 
-  defp validate_measurement_specs!(other) do
+  defp validate_measurements!(other) do
     raise ArgumentError, "Expected :measurements to be a list, got #{inspect(other)}"
   end
 
-  @spec validate_measurement_spec!(term()) :: measurement_spec() | no_return()
-  defp validate_measurement_spec!({m, f, a})
+  @spec validate_measurement!(term()) :: measurement() | no_return()
+  defp validate_measurement!({m, f, a})
        when is_atom(m) and is_atom(f) and is_list(a) do
     :ok
   end
 
-  defp validate_measurement_spec!({_, _, _} = invalid_spec) do
-    raise ArgumentError, "Expected MFA measurement spec, got #{inspect(invalid_spec)}"
+  defp validate_measurement!({_, _, _} = invalid_measurement) do
+    raise ArgumentError, "Expected MFA measurement, got #{inspect(invalid_measurement)}"
   end
 
-  defp validate_measurement_spec!({event, {m, f, a}})
+  defp validate_measurement!({event, {m, f, a}})
        when is_list(event) and is_atom(m) and is_atom(f) and is_list(a) do
     :ok
   end
 
-  defp validate_measurement_spec!({_, {_, _, _}} = invalid_spec) do
+  defp validate_measurement!({_, {_, _, _}} = invalid_measurement) do
     raise ArgumentError,
-          "Expected event name with MFA measurement spec, got #{inspect(invalid_spec)}"
+          "Expected event name with MFA measurement, got #{inspect(invalid_measurement)}"
   end
 
-  defp validate_measurement_spec!(invalid_spec) do
+  defp validate_measurement!(invalid_measurement) do
     raise ArgumentError,
-          "Expected measurement spec, got #{inspect(invalid_spec)}"
+          "Expected measurement, got #{inspect(invalid_measurement)}"
   end
 
   @spec validate_period!(term()) :: :ok | no_return()
@@ -205,17 +262,17 @@ defmodule Telemetry.Sampler do
     :ok
   end
 
-  @spec make_measurements_and_filter_misbehaving([measurement_spec()]) :: [measurement_spec()]
-  defp make_measurements_and_filter_misbehaving(specs) do
-    Enum.map(specs, fn spec ->
-      result = make_measurement(spec)
-      {spec, result}
+  @spec make_measurements_and_filter_misbehaving([measurement()]) :: [measurement()]
+  defp make_measurements_and_filter_misbehaving(measurements) do
+    Enum.map(measurements, fn measurement ->
+      result = make_measurement(measurement)
+      {measurement, result}
     end)
-    |> Enum.filter(fn {_spec, ok_or_error} -> ok_or_error == :ok end)
+    |> Enum.filter(fn {_measurement, ok_or_error} -> ok_or_error == :ok end)
     |> Enum.map(&elem(&1, 0))
   end
 
-  @spec make_measurement(measurement_spec()) :: :ok | :error
+  @spec make_measurement(measurement()) :: :ok | :error
   defp make_measurement({event, {m, f, a}} = measurement) do
     case apply(m, f, a) do
       result when is_number(result) ->

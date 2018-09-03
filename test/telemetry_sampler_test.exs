@@ -27,11 +27,11 @@ defmodule Telemetry.SamplerTest do
   test "sampler can have a sampling period configured" do
     event = [:a, :test, :event]
     value = 1
-    spec = {event, {TestMeasure, :single_value, [value]}}
+    measurement = {event, {TestMeasure, :single_value, [value]}}
     period = 500
 
     attach_to(event)
-    {:ok, _} = Sampler.start_link(measurements: [spec], period: period)
+    {:ok, _} = Sampler.start_link(measurements: [measurement], period: period)
 
     ## We don't apply active wait here because we want to make sure that two events are dispatched
     ## *after* the period has passed, and not that at least two events are dispatched before one
@@ -42,9 +42,9 @@ defmodule Telemetry.SamplerTest do
   end
 
   @tag :capture_log
-  test "sampler doesn't start given invalid measurement spec" do
+  test "sampler doesn't start given invalid measurement" do
     assert_raise ArgumentError, fn ->
-      Sampler.start_link(measurements: [:made_up_spec])
+      Sampler.start_link(measurements: [:invalid_measurement])
     end
   end
 
@@ -55,84 +55,84 @@ defmodule Telemetry.SamplerTest do
     end
   end
 
-  test "sampler can be given an MFA dispatching a Telemetry event as measurement spec" do
+  test "sampler can be given an MFA dispatching a Telemetry event as measurement" do
     event = [:a, :test, :event]
     value = 1
     metadata = %{some: "metadata"}
-    spec = {TestMeasure, :single_sample, [event, value, metadata]}
+    measurement = {TestMeasure, :single_sample, [event, value, metadata]}
 
     attach_to(event)
-    {:ok, _} = Sampler.start_link(measurements: [spec])
+    {:ok, _} = Sampler.start_link(measurements: [measurement])
 
     assert_dispatched ^event, ^value, ^metadata
   end
 
-  test "sampler can be given an event name and an MFA returning a number as measurement spec" do
+  test "sampler can be given an event name and an MFA returning a number as measurement" do
     event = [:a, :test, :event]
     value = 1
     empty_metadata = %{}
-    spec = {event, {TestMeasure, :single_value, [value]}}
+    measurement = {event, {TestMeasure, :single_value, [value]}}
 
     attach_to(event)
-    {:ok, _} = Sampler.start_link(measurements: [spec])
+    {:ok, _} = Sampler.start_link(measurements: [measurement])
 
     assert_dispatched ^event, ^value, ^empty_metadata
   end
 
-  test "sampler's measurement specs can be listed" do
-    spec1 = {Telemetry.Sampler.VM, :memory, []}
-    spec2 = {[:a, :first, :test, :event], {TestMeasure, :single_value, [1]}}
-    spec3 = {TestMeasure, :single_sample, [[:a, :second, :test, :event], 1, %{}]}
+  test "sampler's measurements can be listed" do
+    measurement1 = {Telemetry.Sampler.VM, :memory, []}
+    measurement2 = {[:a, :first, :test, :event], {TestMeasure, :single_value, [1]}}
+    measurement3 = {TestMeasure, :single_sample, [[:a, :second, :test, :event], 1, %{}]}
 
-    {:ok, sampler} = Sampler.start_link(measurements: [spec1, spec2, spec3])
-    specs = Sampler.list_specs(sampler)
+    {:ok, sampler} = Sampler.start_link(measurements: [measurement1, measurement2, measurement3])
+    measurements = Sampler.list_measurements(sampler)
 
-    assert spec1 in specs
-    assert spec2 in specs
-    assert spec3 in specs
-    assert 3 == length(specs)
+    assert measurement1 in measurements
+    assert measurement2 in measurements
+    assert measurement3 in measurements
+    assert 3 == length(measurements)
   end
 
   @tag :capture_log
-  test "measurement spec is removed from sampler if it returns incorrect value" do
-    invalid_specs = [
+  test "measurement is removed from sampler if it returns incorrect value" do
+    invalid_measurements = [
       {[:a, :test, :event], {TestMeasure, :not_a_number, []}}
     ]
 
-    {:ok, sampler} = Sampler.start_link(measurements: invalid_specs)
+    {:ok, sampler} = Sampler.start_link(measurements: invalid_measurements)
 
-    assert eventually(fn -> [] == Sampler.list_specs(sampler) end)
+    assert eventually(fn -> [] == Sampler.list_measurements(sampler) end)
   end
 
   @tag :capture_log
-  test "measurement spec is removed from sampler if it raises" do
-    invalid_spec = {TestMeasure, :raise, []}
+  test "measurement is removed from sampler if it raises" do
+    invalid_measurement = {TestMeasure, :raise, []}
 
-    {:ok, sampler} = Sampler.start_link(measurements: [invalid_spec])
+    {:ok, sampler} = Sampler.start_link(measurements: [invalid_measurement])
 
-    assert eventually(fn -> [] == Sampler.list_specs(sampler) end)
+    assert eventually(fn -> [] == Sampler.list_measurements(sampler) end)
   end
 
   test "sampler can be started under supervisor using the old-style child spec" do
-    specs = [{Telemetry.Sampler.VM, :memory, []}]
+    measurements = [{Telemetry.Sampler.VM, :memory, []}]
     child_id = MySampler
-    children = [Supervisor.Spec.worker(Sampler, [[measurements: specs]], id: child_id)]
+    children = [Supervisor.Spec.worker(Sampler, [[measurements: measurements]], id: child_id)]
 
     {:ok, sup} = Supervisor.start_link(children, strategy: :one_for_one)
 
     assert [{^child_id, sampler, :worker, [Sampler]}] = Supervisor.which_children(sup)
-    assert specs == Sampler.list_specs(sampler)
+    assert measurements == Sampler.list_measurements(sampler)
   end
 
   @tag :elixir_1_5_child_specs
   test "sampler can be started under supervisor using the new-style child spec" do
-    specs = [{Telemetry.Sampler.VM, :memory, []}]
+    measurements = [{Telemetry.Sampler.VM, :memory, []}]
     child_id = MySampler
-    children = [Supervisor.child_spec({Sampler, measurements: specs}, id: child_id)]
+    children = [Supervisor.child_spec({Sampler, measurements: measurements}, id: child_id)]
 
     {:ok, sup} = Supervisor.start_link(children, strategy: :one_for_one)
 
     assert [{^child_id, sampler, :worker, [Sampler]}] = Supervisor.which_children(sup)
-    assert specs == Sampler.list_specs(sampler)
+    assert measurements == Sampler.list_measurements(sampler)
   end
 end

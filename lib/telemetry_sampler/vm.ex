@@ -1,6 +1,6 @@
 defmodule Telemetry.Sampler.VM do
   @moduledoc """
-  Collection of functions returning samples of Erlang virtual machine metrics.
+  Collection of functions dispatching `Telemetry` events with Erlang VM metrics.
 
   See documentation for `Telemetry.Sampler` to learn how to use these functions.
   """
@@ -8,11 +8,12 @@ defmodule Telemetry.Sampler.VM do
   alias Telemetry.Sampler
 
   @doc """
-  Returns a list of samples with amount of memory dynamically allocated by the VM
+  Dispatches events with amount of memory dynamically allocated by the VM.
 
-  Each sample has the same event name, `[:vm, :memory]`. Event metadata includes only a single key,
-  `:type`, which corresponds to the type of memory measured. Sample value is the amount of memory of
-  type given in metadata allocated by the VM, in bytes.
+  A single event is dispatched for each type of memory measured. Event name is always
+  `[:vm, :memory]`. Event metadata includes only a single key, `:type`, which corresponds to the
+  type of memory measured. Event value is the amount of memory of type given in metadata allocated
+  by the VM, in bytes.
 
   The set of memory types may vary: see documentation for `:erlang.memory/0` to learn about possible
   values.
