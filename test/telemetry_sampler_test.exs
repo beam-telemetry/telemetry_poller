@@ -1,5 +1,6 @@
 defmodule Telemetry.SamplerTest do
   use ExUnit.Case
+  doctest Telemetry.Sampler, except: [:moduledoc]
 
   import Telemetry.Sampler.TestHelpers
 
@@ -134,5 +135,48 @@ defmodule Telemetry.SamplerTest do
 
     assert [{^child_id, sampler, :worker, [Sampler]}] = Supervisor.which_children(sup)
     assert measurements == Sampler.list_measurements(sampler)
+  end
+
+  describe "vm_measurements/1" do
+    test "translates atom to measurement" do
+      assert [{Sampler.VM, :memory, []}] == Sampler.vm_measurements([:memory])
+    end
+
+    test "translates tuple to measurement" do
+      assert [
+               {Sampler.VM, :memory, []},
+               {Sampler.VM, :message_queue_length, [MyProcess]}
+             ] == Sampler.vm_measurements([{:memory, []}, {:message_queue_length, [MyProcess]}])
+    end
+
+    test "raises if function name is not an atom" do
+      assert_raise ArgumentError, fn ->
+        Sampler.vm_measurements(["memory"])
+      end
+
+      assert_raise ArgumentError, fn ->
+        Sampler.vm_measurements([{"message_queue_length", [MyProcess]}])
+      end
+    end
+
+    test "raises if function arguments are not a list" do
+      assert_raise ArgumentError, fn ->
+        Sampler.vm_measurements([{:message_queue_length, MyProcess}])
+      end
+    end
+
+    test "raises if Telemetry.Sampler.VM doesn't export a function with given arity" do
+      assert_raise ArgumentError, fn ->
+        Sampler.vm_measurements([{:memory, [:total]}])
+      end
+
+      assert_raise ArgumentError, fn ->
+        Sampler.vm_measurements([{:message_queue_length, []}])
+      end
+    end
+
+    test "returns unique measurements" do
+      assert [{Sampler.VM, :memory, []}] == Sampler.vm_measurements([:memory, :memory])
+    end
   end
 end

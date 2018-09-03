@@ -8,11 +8,9 @@ defmodule Telemetry.Sampler do
   2. As a tuple, where the first element is event name and the second element is an MFA returning a
      **number**. In this case, Sampler will dispatch an event with given name and value returned
      by the MFA invokation; event metadata will be always empty.
+  If the invokation of MFA returns an invalid value (i.e. it should return a number but doesn't), the measurement is removed from the list and the error is logged.
 
-  If the invokation of MFA returns an invalid value (i.e. it should return a number but doesn't),
-  the measurement is removed from the list and the error is logged.
-
-  See the "Examples" section for more concrete examples.
+  See the "Example - (...)" sections for more concrete examples.
 
   ## Starting and stopping
 
@@ -34,10 +32,99 @@ defmodule Telemetry.Sampler do
 
   ## VM measurements
 
-  See `Telemetry.Sampler.VM` module for functions which can be used as measurements for metrics
-  related to the Erlang virtual machine.
+  `Telemetry.Sampler.VM` module contains a bunch of functions which can be used to collect
+  measurements from the Erlang virtual machine. You can use `vm_measurements/1` function to make
+  it easier to hook them up to the Sampler:
 
-  ## Examples
+      Sampler.start_link(measurements:
+        Sampler.vm_measurements([:memory, {:message_queue_length, MyProcess}])
+      )
+
+  ## Example - measuring message queue length of the process
+
+  Measuring process' message queue length is a good way to find out if and when the process becomes
+  the bottleneck. If the length of the queue is growing, it means that the process is not keeping
+  up with the work it's been assigned and other processes asking it to do the work will get
+  timeouts. Let's try to simulate that situation using the following GenServer:
+
+      defmodule Worker do
+        use GenServer
+
+        def start_link(name) do
+          GenServer.start_link(__MODULE__, [], name: name)
+        end
+
+        def do_work(name) do
+          GenServer.call(name, :do_work, timeout = 5_000)
+        end
+
+        def init([]) do
+          {:ok, %{}}
+        end
+
+        def handle_call(:do_work, _, state) do
+          Process.sleep(1000)
+          {:reply, :ok, state}
+        end
+      end
+
+  When assigned with work (`handle_call/3`), the worker will sleep for 1 second to imitate long
+  running task. Let's start the worker and Sampler measuring its message queue length:
+
+      iex> alias Telemetry.Sampler
+      iex> worker = Worker
+      iex> Sampler.start_link(
+      ...>   measurements: Sampler.vm_measurements([{:message_queue_length, [worker]}]),
+      ...>   period: 2000)
+      iex> Worker.start_link(worker)
+      {:ok, _}
+
+  In order to observe the message queue length we can install the event handler printing it out to
+  the console:
+
+      iex> defmodule Handler do
+      ...>   def handle([:vm, :message_queue_length], length, %{process: worker}, _) do
+      ...>     IO.puts("Process #\{inspect(worker)} message queue length: #\{length}")
+      ...>   end
+      ...> end
+      iex> Telemetry.attach(:handler, [:vm, :message_queue_length], Handler, :handle)
+      :ok
+
+  Now start let's assigning work to the worker:
+
+      iex> for _ <- 1..1000 do
+      ...>   spawn_link(fn -> Worker.do_work(worker) end)
+      ...>   Process.sleep(500)
+      ...> end
+      iex> :ok
+      :ok
+
+
+  Here we start 1000 processes placing a work order, waiting 500 milliseconds after starting each
+  one. Given that the worker does its work in 1000 milliseconds, it means that new work orders come
+  twice as fast as the worker is able to complete them. In the console, you'll see something like
+  this:
+
+  ```
+  Process Worker message queue length: 1
+  Process Worker message queue length: 3
+  Process Worker message queue length: 5
+  Process Worker message queue length: 7
+  ```
+
+  and finally:
+
+  ```
+  ** (EXIT from #PID<0.168.0>) shell process exited with reason: exited in: GenServer.call(Worker, :do_work, 5000)
+    ** (EXIT) time out
+  ```
+
+  The worker wasn't able to complete the work on time (we set the 5000 millisecond timeout) and
+  `Worker.do_work/1` finally failed. Observing the message queue length metric allowed us to notice
+  that the worker is the system's bottleneck. In a healthy situation the message queue length would
+  be roughly constant.
+
+  ## Example - tracking number of active sessions in web application
 
   Let's imagine that you have a web application and you would like to periodically measure number
   of active user sessions.
@@ -177,6 +264,37 @@ defmodule Telemetry.Sampler do
     GenServer.call(sampler, :get_measurements)
   end
 
+  @doc """
+  Helper function for building VM measurements.
+
+  It accepts a list of two-element tuples where the first element is an atom corresponding to the
+  function from the `Telemetry.Sampler.VM` module, and the second is a list of arguments applied
+  to that function. Alternatively, instead of a tuple you can provide an atom, which is equivalent
+  to a tuple with an empty list of arguments. The result is a list of measurements which can be fed
+  to `start_link/1`'s `:measurements` option. Returned measurements are unique.
+
+  Raises if the given function is not exported by `Telemetry.Sampler.VM` module or the length
+  of argument list doesn't match the function's arity.
+
+  ## Examples
+
+      iex> Telemetry.Sampler.vm_measurements([:memory])
+      [{Telemetry.Sampler.VM, :memory, []}]
+
+      iex> Telemetry.Sampler.vm_measurements([:memory]) == Telemetry.Sampler.vm_measurements([{:memory, []}])
+      true
+
+      iex> Telemetry.Sampler.vm_measurements([:memory, {:message_queue_length, [MyProcess]}])
+      [{Telemetry.Sampler.VM, :memory, []}, {Telemetry.Sampler.VM, :message_queue_length, [MyProcess]}]
+  """
+  @spec vm_measurements([function_name :: atom() | {function_name :: atom(), args :: list()}]) ::
+          [measurement()]
+  def vm_measurements(vm_measurements) when is_list(vm_measurements) do
+    measurements = normalize_vm_measurements(vm_measurements)
+    validate_vm_measurements!(measurements)
+    Enum.uniq(measurements)
+  end
+
   ## GenServer callbacks
 
   @impl true
@@ -308,5 +426,45 @@ defmodule Telemetry.Sampler do
       )
 
       :error
+  end
+
+  @spec normalize_vm_measurements([atom() | {atom(), list()}]) :: [{module(), term(), term()}]
+  defp normalize_vm_measurements(vm_measurements) do
+    Enum.map(vm_measurements, &normalize_vm_measurement/1)
+  end
+
+  defp normalize_vm_measurement({function_name, args}) do
+    {Telemetry.Sampler.VM, function_name, args}
+  end
+
+  defp normalize_vm_measurement(function_name) do
+    normalize_vm_measurement({function_name, []})
+  end
+
+  @spec validate_vm_measurements!([{module(), term(), term()}]) :: :ok | no_return()
+  defp validate_vm_measurements!(measurements) do
+    {:module, _} = Code.ensure_loaded(Telemetry.Sampler.VM)
+    Enum.each(measurements, &validate_vm_measurement!/1)
+  end
+
+  @spec validate_vm_measurement!({module(), term(), term()}) :: :ok | no_return()
+  defp validate_vm_measurement!({_module, function_name, args})
+       when is_atom(function_name) and is_list(args) do
+    args_len = length(args)
+
+    if function_exported?(Telemetry.Sampler.VM, function_name, args_len) do
+      :ok
+    else
+      raise ArgumentError,
+            "Function Telemetry.Sampler.VM.#{function_name}/#{args_len} is not exported"
+    end
+  end
+
+  defp validate_vm_measurement!({_module, function_name, args}) when is_list(args) do
+    raise ArgumentError, "Expected function name to be an atom, got #{inspect(function_name)}"
+  end
+
+  defp validate_vm_measurement!({_module, _function_name, args}) do
+    raise ArgumentError, "Expected arguments to be a list, got #{inspect(args)}"
   end
 end
