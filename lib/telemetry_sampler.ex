@@ -8,7 +8,9 @@ defmodule Telemetry.Sampler do
   2. As a tuple, where the first element is event name and the second element is an MFA returning a
      **number**. In this case, Sampler will dispatch an event with given name and value returned
      by the MFA invokation; event metadata will be always empty.
-  If the invokation of MFA returns an invalid value (i.e. it should return a number but doesn't), the measurement is removed from the list and the error is logged.
+
+  If the invokation of MFA returns an invalid value (i.e. it should return a number but doesn't),
+  the measurement is removed from the list and the error is logged.
 
   See the "Example - (...)" sections for more concrete examples.
 
@@ -98,7 +100,6 @@ defmodule Telemetry.Sampler do
       ...> end
       iex> :ok
       :ok
-
 
   Here we start 1000 processes placing a work order, waiting 500 milliseconds after starting each
   one. Given that the worker does its work in 1000 milliseconds, it means that new work orders come
