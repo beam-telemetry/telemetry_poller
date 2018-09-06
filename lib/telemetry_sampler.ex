@@ -95,7 +95,7 @@ defmodule Telemetry.Sampler do
       iex> Telemetry.attach(:handler, [:example_app, :message_queue_length], Handler, :handle)
       :ok
 
-  Now start let's assigning work to the worker:
+  Now let's start assigning work to the worker:
 
       iex> for _ <- 1..1000 do
       ...>   spawn_link(fn -> Worker.do_work(name) end)
