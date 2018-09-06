@@ -42,8 +42,8 @@ defmodule Telemetry.Sampler do
       defmodule Worker do
         use GenServer
 
-        def start_link() do
-          GenServer.start_link(__MODULE__, [])
+        def start_link(name) do
+          GenServer.start_link(__MODULE__, [], name: name)
         end
 
         def do_work(name) do
@@ -66,26 +66,30 @@ defmodule Telemetry.Sampler do
   Now we need a measurement dispatching the message queue length of the worker:
 
       defmodule ExampleApp.Measurements do
-        def message_queue_length(pid) do
-          {:message_queue_len, length} = Process.info(pid, :message_queue_len)
-          Telemetry.execute([:example_app, :message_queue_length], length, %{pid: pid})
+        def message_queue_length(name) do
+          with pid when is_pid(pid) <- Process.whereis(name),
+               {:message_queue_len, length} <- Process.info(pid, :message_queue_len) do
+            Telemetry.execute([:example_app, :message_queue_length], length, %{name: name})
+          end
         end
       end
 
   Let's start the worker and Sampler with just defined measurement:
 
-      iex> {:ok, pid} = Worker.start_link()
+      iex> name = MyWorker
+      iex> {:ok, pid} = Worker.start_link(name)
       iex> Telemetry.Sampler.start_link(
-      ...>   measurements: [{ExampleApp.Measurements, :message_queue_length, [pid]}],
-      ...>   period: 2000)
+      ...>   measurements: [{ExampleApp.Measurements, :message_queue_length, [MyWorker]}],
+      ...>   period: 2000
+      ...> )
       {:ok, _}
 
   In order to observe the message queue length we can install the event handler printing it out to
   the console:
 
       iex> defmodule Handler do
-      ...>   def handle([:example_app, :message_queue_length], length, %{pid: pid}, _) do
-      ...>     IO.puts("Process #\{inspect(pid)} message queue length: #\{length}")
+      ...>   def handle([:example_app, :message_queue_length], length, %{name: name}, _) do
+      ...>     IO.puts("Process #\{inspect(name)} message queue length: #\{length}")
       ...>   end
       ...> end
       iex> Telemetry.attach(:handler, [:example_app, :message_queue_length], Handler, :handle)
@@ -94,7 +98,7 @@ defmodule Telemetry.Sampler do
   Now start let's assigning work to the worker:
 
       iex> for _ <- 1..1000 do
-      ...>   spawn_link(fn -> Worker.do_work(pid) end)
+      ...>   spawn_link(fn -> Worker.do_work(name) end)
       ...>   Process.sleep(500)
       ...> end
       iex> :ok
@@ -106,10 +110,10 @@ defmodule Telemetry.Sampler do
   this:
 
   ```
-  Process Worker message queue length: 1
-  Process Worker message queue length: 3
-  Process Worker message queue length: 5
-  Process Worker message queue length: 7
+  Process MyWorker message queue length: 1
+  Process MyWorker message queue length: 3
+  Process MyWorker message queue length: 5
+  Process MyWorker message queue length: 7
   ```
 
   and finally:
