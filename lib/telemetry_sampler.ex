@@ -29,13 +29,8 @@ defmodule Telemetry.Sampler do
 
   ## VM measurements
 
-  `Telemetry.Sampler.VM` module contains a bunch of functions which can be used to collect
-  measurements from the Erlang virtual machine. You can use `vm_measurements/1` function to make
-  it easier to hook them up to the Sampler:
-
-      Sampler.start_link(measurements:
-        Sampler.vm_measurements([:memory, {:message_queue_length, MyProcess}])
-      )
+  The `vm_measurements/1` function returns common measurements related to Erlang virtual machine
+  metrics. See its documentation for more information.
 
   ## Example - measuring message queue length of the process
 
@@ -47,8 +42,8 @@ defmodule Telemetry.Sampler do
       defmodule Worker do
         use GenServer
 
-        def start_link(name) do
-          GenServer.start_link(__MODULE__, [], name: name)
+        def start_link() do
+          GenServer.start_link(__MODULE__, [])
         end
 
         def do_work(name) do
@@ -66,31 +61,40 @@ defmodule Telemetry.Sampler do
       end
 
   When assigned with work (`handle_call/3`), the worker will sleep for 1 second to imitate long
-  running task. Let's start the worker and Sampler measuring its message queue length:
+  running task.
 
-      iex> alias Telemetry.Sampler
-      iex> worker = Worker
-      iex> Sampler.start_link(
-      ...>   measurements: Sampler.vm_measurements([{:message_queue_length, [worker]}]),
+  Now we need a measurement dispatching the message queue length of the worker:
+
+      defmodule ExampleApp.Measurements do
+        def message_queue_length(pid) do
+          {:message_queue_len, length} = Process.info(pid, :message_queue_len)
+          Telemetry.execute([:example_app, :message_queue_length], length, %{pid: pid})
+        end
+      end
+
+  Let's start the worker and Sampler with just defined measurement:
+
+      iex> {:ok, pid} = Worker.start_link()
+      iex> Telemetry.Sampler.start_link(
+      ...>   measurements: [{ExampleApp.Measurements, :message_queue_length, [pid]}],
       ...>   period: 2000)
-      iex> Worker.start_link(worker)
       {:ok, _}
 
   In order to observe the message queue length we can install the event handler printing it out to
   the console:
 
       iex> defmodule Handler do
-      ...>   def handle([:vm, :message_queue_length], length, %{process: worker}, _) do
-      ...>     IO.puts("Process #\{inspect(worker)} message queue length: #\{length}")
+      ...>   def handle([:example_app, :message_queue_length], length, %{pid: pid}, _) do
+      ...>     IO.puts("Process #\{inspect(pid)} message queue length: #\{length}")
       ...>   end
       ...> end
-      iex> Telemetry.attach(:handler, [:vm, :message_queue_length], Handler, :handle)
+      iex> Telemetry.attach(:handler, [:example_app, :message_queue_length], Handler, :handle)
       :ok
 
   Now start let's assigning work to the worker:
 
       iex> for _ <- 1..1000 do
-      ...>   spawn_link(fn -> Worker.do_work(worker) end)
+      ...>   spawn_link(fn -> Worker.do_work(pid) end)
       ...>   Process.sleep(500)
       ...> end
       iex> :ok
@@ -176,6 +180,7 @@ defmodule Telemetry.Sampler do
   require Logger
 
   @default_period 10_000
+  @default_vm_measurements [:memory]
 
   @type t :: GenServer.server()
   @type options :: [option()]
@@ -185,6 +190,7 @@ defmodule Telemetry.Sampler do
           | {:measurements, [measurement()]}
   @type period :: pos_integer()
   @type measurement() :: mfa()
+  @type vm_measurement() :: :memory
 
   ## API
 
@@ -252,33 +258,34 @@ defmodule Telemetry.Sampler do
   end
 
   @doc """
-  Helper function for building VM measurements.
+  Returns measurements dispatching events with Erlang virtual machine metrics
 
-  It accepts a list of two-element tuples where the first element is an atom corresponding to the
-  function from the `Telemetry.Sampler.VM` module, and the second is a list of arguments applied
-  to that function. Alternatively, instead of a tuple you can provide an atom, which is equivalent
-  to a tuple with an empty list of arguments. The result is a list of measurements which can be fed
-  to `start_link/1`'s `:measurements` option. Returned measurements are unique.
+  It accepts a list `t:vm_measurement/0`s and returns a list of `t:measurement/0`s which can
+  be provided to `start_link/1`'s `:measurements` option.
 
-  Raises if the given function is not exported by `Telemetry.Sampler.VM` module or the length
-  of argument list doesn't match the function's arity.
+  Do not rely on the exact values returned by this function - the only guarantee is that they
+  are of type `t:measurement/0` and their modification will not be considered a breaking change,
+  unless the shape of events dispatched by returned measurements changes.
 
-  ## Examples
+  Returned measurements are unique.
 
-      iex> Telemetry.Sampler.vm_measurements([:memory])
-      [{Telemetry.Sampler.VM, :memory, []}]
+  ## Available measurements
 
-      iex> Telemetry.Sampler.vm_measurements([:memory]) == Telemetry.Sampler.vm_measurements([{:memory, []}])
-      true
+  * `:memory` - dispatches events with amount of memory dynamically allocated by the VM.  A single
+    event is dispatched for each type of memory measured. Event name is always `[:vm, :memory]`.
+    Event metadata includes only a single key, `:type`, which corresponds to the type of memory
+    measured. Event value is the amount of memory of type given in metadata allocated by the VM,
+    in bytes. The set of memory types may vary: see documentation for `:erlang.memory/0` to learn
+    about possible values.
 
-      iex> Telemetry.Sampler.vm_measurements([:memory, {:message_queue_length, [MyProcess]}])
-      [{Telemetry.Sampler.VM, :memory, []}, {Telemetry.Sampler.VM, :message_queue_length, [MyProcess]}]
+  ## Default measurements
+
+  The 0-arity version of this function includes `:memory` measurement by default.
   """
-  @spec vm_measurements([function_name :: atom() | {function_name :: atom(), args :: list()}]) ::
-          [measurement()]
-  def vm_measurements(vm_measurements) when is_list(vm_measurements) do
-    measurements = normalize_vm_measurements(vm_measurements)
-    validate_vm_measurements!(measurements)
+  @spec vm_measurements([vm_measurement()]) :: [measurement()]
+  def vm_measurements(vm_measurements \\ @default_vm_measurements)
+      when is_list(vm_measurements) do
+    measurements = parse_vm_measurements!(vm_measurements)
     Enum.uniq(measurements)
   end
 
@@ -376,43 +383,22 @@ defmodule Telemetry.Sampler do
       :error
   end
 
-  @spec normalize_vm_measurements([atom() | {atom(), list()}]) :: [{module(), term(), term()}]
-  defp normalize_vm_measurements(vm_measurements) do
-    Enum.map(vm_measurements, &normalize_vm_measurement/1)
+  @spec parse_vm_measurements!([term()]) :: [measurement()] | no_return()
+  defp parse_vm_measurements!(vm_measurements) do
+    Enum.map(vm_measurements, &parse_vm_measurement!/1)
   end
 
-  defp normalize_vm_measurement({function_name, args}) do
-    {Telemetry.Sampler.VM, function_name, args}
+  @spec parse_vm_measurement!(term()) :: [measurement()] | no_return()
+  defp parse_vm_measurement!(:memory) do
+    vm_measurement(:memory)
   end
 
-  defp normalize_vm_measurement(function_name) do
-    normalize_vm_measurement({function_name, []})
+  defp parse_vm_measurement!(other) do
+    raise ArgumentError, "Expected VM measurement, got #{inspect(other)}"
   end
 
-  @spec validate_vm_measurements!([{module(), term(), term()}]) :: :ok | no_return()
-  defp validate_vm_measurements!(measurements) do
-    {:module, _} = Code.ensure_loaded(Telemetry.Sampler.VM)
-    Enum.each(measurements, &validate_vm_measurement!/1)
-  end
-
-  @spec validate_vm_measurement!({module(), term(), term()}) :: :ok | no_return()
-  defp validate_vm_measurement!({_module, function_name, args})
-       when is_atom(function_name) and is_list(args) do
-    args_len = length(args)
-
-    if function_exported?(Telemetry.Sampler.VM, function_name, args_len) do
-      :ok
-    else
-      raise ArgumentError,
-            "Function Telemetry.Sampler.VM.#{function_name}/#{args_len} is not exported"
-    end
-  end
-
-  defp validate_vm_measurement!({_module, function_name, args}) when is_list(args) do
-    raise ArgumentError, "Expected function name to be an atom, got #{inspect(function_name)}"
-  end
-
-  defp validate_vm_measurement!({_module, _function_name, args}) do
-    raise ArgumentError, "Expected arguments to be a list, got #{inspect(args)}"
+  @spec vm_measurement(function :: atom(), args :: list()) :: measurement()
+  defp vm_measurement(function, args \\ []) do
+    {Telemetry.Sampler.VM, function, args}
   end
 end
