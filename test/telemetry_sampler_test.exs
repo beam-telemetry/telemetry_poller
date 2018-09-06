@@ -7,12 +7,8 @@ defmodule Telemetry.SamplerTest do
   alias Telemetry.Sampler
 
   defmodule TestMeasure do
-    def single_value(value), do: value
-
-    def single_sample(event, value, metadata),
+    def single_sample(event, value, metadata \\ %{}),
       do: Telemetry.execute(event, value, metadata)
-
-    def not_a_number(), do: :not_a_number
 
     def raise(), do: raise("I'm raising because I can!")
   end
@@ -28,7 +24,7 @@ defmodule Telemetry.SamplerTest do
   test "sampler can have a sampling period configured" do
     event = [:a, :test, :event]
     value = 1
-    measurement = {event, {TestMeasure, :single_value, [value]}}
+    measurement = {TestMeasure, :single_sample, [event, value]}
     period = 500
 
     attach_to(event)
@@ -68,41 +64,16 @@ defmodule Telemetry.SamplerTest do
     assert_dispatched ^event, ^value, ^metadata
   end
 
-  test "sampler can be given an event name and an MFA returning a number as measurement" do
-    event = [:a, :test, :event]
-    value = 1
-    empty_metadata = %{}
-    measurement = {event, {TestMeasure, :single_value, [value]}}
-
-    attach_to(event)
-    {:ok, _} = Sampler.start_link(measurements: [measurement])
-
-    assert_dispatched ^event, ^value, ^empty_metadata
-  end
-
   test "sampler's measurements can be listed" do
     measurement1 = {Telemetry.Sampler.VM, :memory, []}
-    measurement2 = {[:a, :first, :test, :event], {TestMeasure, :single_value, [1]}}
-    measurement3 = {TestMeasure, :single_sample, [[:a, :second, :test, :event], 1, %{}]}
+    measurement2 = {TestMeasure, :single_sample, [[:a, :second, :test, :event], 1, %{}]}
 
-    {:ok, sampler} = Sampler.start_link(measurements: [measurement1, measurement2, measurement3])
+    {:ok, sampler} = Sampler.start_link(measurements: [measurement1, measurement2])
     measurements = Sampler.list_measurements(sampler)
 
     assert measurement1 in measurements
     assert measurement2 in measurements
-    assert measurement3 in measurements
-    assert 3 == length(measurements)
-  end
-
-  @tag :capture_log
-  test "measurement is removed from sampler if it returns incorrect value" do
-    invalid_measurements = [
-      {[:a, :test, :event], {TestMeasure, :not_a_number, []}}
-    ]
-
-    {:ok, sampler} = Sampler.start_link(measurements: invalid_measurements)
-
-    assert eventually(fn -> [] == Sampler.list_measurements(sampler) end)
+    assert 2 == length(measurements)
   end
 
   @tag :capture_log

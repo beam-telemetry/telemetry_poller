@@ -2,15 +2,10 @@ defmodule Telemetry.Sampler do
   @moduledoc """
   Allows to periodically collect measurements and publish them as `Telemetry` events.
 
-  Measurements can be described in two ways:
+  Measurements are MFAs called periodically by the Sampler process. These MFAs should collect
+  a value (if possible) and dispatch an event using `Telemetry.execute/3` function.
 
-  1. As an MFA tuple which dispatches events using `Telemetry.execute/3` upon invokation;
-  2. As a tuple, where the first element is event name and the second element is an MFA returning a
-     **number**. In this case, Sampler will dispatch an event with given name and value returned
-     by the MFA invokation; event metadata will be always empty.
-
-  If the invokation of MFA returns an invalid value (i.e. it should return a number but doesn't),
-  the measurement is removed from the list and the error is logged.
+  If the invokation of the MFA fails, the measurement is removed from the Sampler.
 
   See the "Example - (...)" sections for more concrete examples.
 
@@ -137,8 +132,7 @@ defmodule Telemetry.Sampler do
         end
       end
 
-  There are two ways in which you can hook this measurement up to a Sampler. The first approach is
-  to write your own dispatching function:
+  To achieve that, we need a measurement dispatching the value we're interested in:
 
       defmodule ExampleApp.Measurements do
         def dispatch_session_count() do
@@ -152,16 +146,8 @@ defmodule Telemetry.Sampler do
         {ExampleApp.Measurements, :dispatch_session_count, []}
       ])
 
-  However, given that the event does not carry any metadata, it's easier to wire the
-  `ExampleApp.session_count/0` function directly:
-
-      Telemetry.Sampler.start_link(measurements: [
-        {[:example_app, :session_count], {ExampleApp, :session_count, []}}
-      ])
-
-  Both solutions are equivalent, but only because the event metadata is empty. If you find that you
-  need to somehow label the event values, e.g. differentiate between number of sessions of regular
-  and admin users, then only the first approach is a viable choice:
+  If you find that you need to somehow label the event values, e.g. differentiate between number of
+  sessions of regular and admin users, you could use event metadata:
 
       defmodule ExampleApp.Measurements do
         def dispatch_session_count() do
@@ -198,7 +184,7 @@ defmodule Telemetry.Sampler do
           | {:period, period()}
           | {:measurements, [measurement()]}
   @type period :: pos_integer()
-  @type measurement() :: mfa() | {Telemetry.event_name(), mfa()}
+  @type measurement() :: mfa()
 
   ## API
 
@@ -350,20 +336,6 @@ defmodule Telemetry.Sampler do
     :ok
   end
 
-  defp validate_measurement!({_, _, _} = invalid_measurement) do
-    raise ArgumentError, "Expected MFA measurement, got #{inspect(invalid_measurement)}"
-  end
-
-  defp validate_measurement!({event, {m, f, a}})
-       when is_list(event) and is_atom(m) and is_atom(f) and is_list(a) do
-    :ok
-  end
-
-  defp validate_measurement!({_, {_, _, _}} = invalid_measurement) do
-    raise ArgumentError,
-          "Expected event name with MFA measurement, got #{inspect(invalid_measurement)}"
-  end
-
   defp validate_measurement!(invalid_measurement) do
     raise ArgumentError,
           "Expected measurement, got #{inspect(invalid_measurement)}"
@@ -389,31 +361,6 @@ defmodule Telemetry.Sampler do
     end)
     |> Enum.filter(fn {_measurement, ok_or_error} -> ok_or_error == :ok end)
     |> Enum.map(&elem(&1, 0))
-  end
-
-  @spec make_measurement(measurement()) :: :ok | :error
-  defp make_measurement({event, {m, f, a}} = measurement) do
-    case apply(m, f, a) do
-      result when is_number(result) ->
-        Telemetry.execute(event, result)
-        :ok
-
-      result ->
-        Logger.error(
-          "Expected an MFA defined by measurement #{inspect(measurement)} to return " <>
-            "a number, got #{inspect(result)}"
-        )
-
-        :error
-    end
-  catch
-    kind, reason ->
-      Logger.error(
-        "Error when calling MFA defined by measurement #{inspect(measurement)}:\n" <>
-          "#{Exception.format(kind, reason, System.stacktrace())}"
-      )
-
-      :error
   end
 
   defp make_measurement({m, f, a} = measurement) do
