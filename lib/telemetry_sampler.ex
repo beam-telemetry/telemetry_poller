@@ -180,7 +180,24 @@ defmodule Telemetry.Sampler do
   require Logger
 
   @default_period 10_000
-  @default_vm_measurements [:memory]
+  @default_vm_measurements [
+    :total_memory,
+    :processes_memory,
+    :processes_used_memory,
+    :binary_memory,
+    :ets_memory
+  ]
+  @vm_memory_measurements [
+    :total_memory,
+    :processes_memory,
+    :processes_used_memory,
+    :system_memory,
+    :atom_memory,
+    :atom_used_memory,
+    :binary_memory,
+    :code_memory,
+    :ets_memory
+  ]
 
   @type t :: GenServer.server()
   @type options :: [option()]
@@ -190,7 +207,16 @@ defmodule Telemetry.Sampler do
           | {:measurements, [measurement()]}
   @type period :: pos_integer()
   @type measurement() :: mfa()
-  @type vm_measurement() :: :memory
+  @type vm_measurement() ::
+          :total_memory
+          | :processes_memory
+          | :processes_used_memory
+          | :system_memory
+          | :atom_memory
+          | :atom_used_memory
+          | :binary_memory
+          | :code_memory
+          | :ets_memory
 
   ## API
 
@@ -271,16 +297,43 @@ defmodule Telemetry.Sampler do
 
   ## Available measurements
 
-  * `:memory` - dispatches events with amount of memory dynamically allocated by the VM.  A single
-    event is dispatched for each type of memory measured. Event name is always `[:vm, :memory]`.
-    Event metadata includes only a single key, `:type`, which corresponds to the type of memory
-    measured. Event value is the amount of memory of type given in metadata allocated by the VM,
-    in bytes. The set of memory types may vary: see documentation for `:erlang.memory/0` to learn
-    about possible values.
+  ### Memory
+
+  See documentation for `:erlang.memory/0` function for more information about each type of memory
+  measured.
+
+  * `:total_memory` - dispatches an event with total amount of currently allocated memory, in bytes.
+  Event name is `[:vm, :memory, :total]` and event metadata is empty;
+  * `:processes_memory` - dispatches an event with amount of memory cyrrently allocated for
+    processes, in bytes. Event name is `[:vm, :memory, :processes]` and event metadata is empty;
+  * `:processes_used_memory` - dispatches an event with amount of memory currently used for
+    processes, in bytes. Event name is `[:vm, :memory, :processes_used]` and event metadata is empty.
+    Memory measured is a fraction of value collected by `:processes_memory` measurement;
+  * `:binary_memory` - dispatches an event with amount of memory currently allocated for binaries.
+    Event name is `[:vm, :memory, :binary]` and event metadata is empty;
+  * `:ets_memory` - dispatches an event with amount of memory currently allocated for ETS tables.
+    Event name is `[:vm, :memory, :ets]` and event metadata is empty;
+  * `:system_memory` - dispatches an event with amount of currently allocated memory not directly
+    related to any process running in the VM, in bytes. Event name is `[:vm, :memory, :system]` and
+    event metadata is empty;
+  * `:atom_memory` - dispatches an event with amount of memory currently allocated for atoms. Event
+    name is `[:vm, :memory, :atom]` and event metadata is empty;
+  * `:atom_used_memory` - dispatches an event with amount of memory currently used for atoms. Event
+    name is `[:vm, :memory, :atom_used]` and event metadata is empty;
+  * `:code_memory` - dispatches an event with amount of memory currently allocated for code. Event
+    name is `[:vm, :memory, :code]` and event metadata is empty;
 
   ## Default measurements
 
-  The 0-arity version of this function includes `:memory` measurement by default.
+  The 0-arity version of this function includes `:total_memory`, `:processes_memory`,
+  `:processes_used_memory`, `:binary_memory` and `:ets_memory` measurements by default.
+
+  ## Examples
+
+      alias Telemetry.Sampler
+      Sampler.start_link(
+        measurements: Sampler.vm_measurements() ++ Sampler.vm_measurements(:atom_memory)
+      )
   """
   @spec vm_measurements([vm_measurement()]) :: [measurement()]
   def vm_measurements(vm_measurements \\ @default_vm_measurements)
@@ -389,8 +442,8 @@ defmodule Telemetry.Sampler do
   end
 
   @spec parse_vm_measurement!(term()) :: [measurement()] | no_return()
-  defp parse_vm_measurement!(:memory) do
-    vm_measurement(:memory)
+  defp parse_vm_measurement!(memory) when memory in @vm_memory_measurements do
+    vm_measurement(memory)
   end
 
   defp parse_vm_measurement!(other) do

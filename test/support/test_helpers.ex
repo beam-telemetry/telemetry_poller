@@ -2,6 +2,29 @@ defmodule Telemetry.Sampler.TestHelpers do
   alias Telemetry.Sampler.TestHandler
 
   @doc """
+  Asserts that invokation of given function results in event, whose value and metadata match the
+  patterns, has been dispatched
+  """
+  defmacro assert_dispatch(event, value_pattern, metadata_pattern, timeout \\ 1_000, fun) do
+    quote do
+      require unquote(__MODULE__)
+
+      handler_id = attach_to(unquote(event))
+
+      unquote(fun).()
+
+      unquote(__MODULE__).assert_dispatched(
+        unquote(event),
+        unquote(value_pattern),
+        unquote(metadata_pattern),
+        unquote(timeout)
+      )
+
+      Telemetry.detach(handler_id)
+    end
+  end
+
+  @doc """
   Assert `Telemetry` event matching the given pattern has been dispatched.
 
   THe caller first needs to attach an event handler to selected events using `attach_to/1`.
@@ -19,22 +42,14 @@ defmodule Telemetry.Sampler.TestHelpers do
   end
 
   @doc """
-  Attaches an event handler sending a message to the caller whenever one of the selected events is
-  dispatched.
-
-  After attaching a handler you can assert the event has been dispatched using `assert_dispatched/4`.
-  """
-  def attach_to_many(events) when is_list(events) do
-    Telemetry.attach_many(make_ref(), events, TestHandler, :handle, %{caller: self()})
-  end
-
-  @doc """
   Attaches an event handler sending a message to the caller whenever specified event is dispatched.
 
   After attaching a handler you can assert the event has been dispatched using `assert_dispatched/4`.
   """
   def attach_to(event) do
-    Telemetry.attach(make_ref(), event, TestHandler, :handle, %{caller: self()})
+    handler_id = make_ref()
+    Telemetry.attach(handler_id, event, TestHandler, :handle, %{caller: self()})
+    handler_id
   end
 
   @doc """

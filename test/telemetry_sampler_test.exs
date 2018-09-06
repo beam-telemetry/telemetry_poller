@@ -1,6 +1,5 @@
 defmodule Telemetry.SamplerTest do
   use ExUnit.Case
-  doctest Telemetry.Sampler, except: [:moduledoc]
 
   import Telemetry.Sampler.TestHelpers
 
@@ -34,8 +33,8 @@ defmodule Telemetry.SamplerTest do
     ## *after* the period has passed, and not that at least two events are dispatched before one
     ## period passes.
     Process.sleep(period)
-    assert_dispatched ^event, ^value, _
-    assert_dispatched ^event, ^value, _
+    assert_dispatched ^event, ^value, _, 0
+    assert_dispatched ^event, ^value, _, 100
   end
 
   @tag :capture_log
@@ -58,10 +57,9 @@ defmodule Telemetry.SamplerTest do
     metadata = %{some: "metadata"}
     measurement = {TestMeasure, :single_sample, [event, value, metadata]}
 
-    attach_to(event)
-    {:ok, _} = Sampler.start_link(measurements: [measurement])
-
-    assert_dispatched ^event, ^value, ^metadata
+    assert_dispatch event, ^value, ^metadata, fn ->
+      {:ok, _} = Sampler.start_link(measurements: [measurement])
+    end
   end
 
   test "sampler's measurements can be listed" do
@@ -109,8 +107,20 @@ defmodule Telemetry.SamplerTest do
   end
 
   describe "vm_measurements/1" do
-    test "translates :memory atom to measurement" do
-      assert [{Sampler.VM, :memory, []}] == Sampler.vm_measurements([:memory])
+    for memory_type <- [
+          :total_memory,
+          :processes_memory,
+          :processes_used_memory,
+          :system_memory,
+          :atom_memory,
+          :atom_used_memory,
+          :binary_memory,
+          :code_memory,
+          :ets_memory
+        ] do
+      test "translates #{inspect(memory_type)} atom to measurement" do
+        assert [{_, _, _}] = Sampler.vm_measurements([unquote(memory_type)])
+      end
     end
 
     test "raises when given unknown VM measurement" do
@@ -124,7 +134,7 @@ defmodule Telemetry.SamplerTest do
     end
 
     test "returns unique measurements" do
-      assert [{Sampler.VM, :memory, []}] == Sampler.vm_measurements([:memory, :memory])
+      assert [{_, _, _}] = Sampler.vm_measurements([:total_memory, :total_memory])
     end
   end
 end
