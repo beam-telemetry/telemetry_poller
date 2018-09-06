@@ -1,6 +1,6 @@
 defmodule Telemetry.Sampler do
   @moduledoc """
-  Allows to periodically collect measurements and publish them as `Telemetry` events.
+  Allows to periodically collect measurements and dispatch them as `Telemetry` events.
 
   Measurements are MFAs called periodically by the Sampler process. These MFAs should collect
   a value (if possible) and dispatch an event using `Telemetry.execute/3` function.

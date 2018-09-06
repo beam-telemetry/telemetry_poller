@@ -1,16 +1,22 @@
 defmodule Telemetry.Sampler.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :telemetry_sampler,
-      version: "0.1.0",
+      name: "Telemetry.Sampler",
+      version: @version,
       elixir: "~> 1.4",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       preferred_cli_env: preferred_cli_env(),
       deps: deps(),
-      dialyzer: dialyzer()
+      dialyzer: dialyzer(),
+      docs: docs(),
+      description: description(),
+      package: package()
     ]
   end
 
@@ -40,5 +46,28 @@ defmodule Telemetry.Sampler.MixProject do
 
   defp dialyzer() do
     [ignore_warnings: ".dialyzer_ignore.exs"]
+  end
+
+  defp docs do
+    [
+      main: "Telemetry.Sampler",
+      canonical: "http://hexdocs.pm/telemetry_sampler",
+      source_url: "https://github.com/elixir-telemetry/telemetry_sampler",
+      source_ref: "v#{@version}"
+    ]
+  end
+
+  def description do
+    """
+    Allows to periodically collect measurements and dispatch them as Telemetry events
+    """
+  end
+
+  defp package do
+    [
+      maintainers: ["Arkadiusz Gil", "José Valim"],
+      licenses: ["Apache 2.0"],
+      links: %{"GitHub" => "https://github.com/elixir-telemetry/telemetry_sampler"}
+    ]
   end
 end
