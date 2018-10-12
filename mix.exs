@@ -38,7 +38,7 @@ defmodule Telemetry.Sampler.MixProject do
 
   defp deps do
     [
-      {:telemetry, "~> 0.1.0"},
+      {:telemetry, "~> 0.2.0"},
       {:ex_doc, "~> 0.19", only: :docs},
       {:dialyxir, "~> 1.0.0-rc.1", only: :test, runtime: false}
     ]
