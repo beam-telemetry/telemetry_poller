@@ -1,8 +1,8 @@
-# Telemetry.Sampler
+# Telemetry.Poller
 
 Allows to periodically collect measurements and dispatch them as Telemetry events.
 
-Sampler provides a convenient API for specifying functions called periodically to dispatch
+Poller provides a convenient API for specifying functions called periodically to dispatch
 measurements as Telemetry events. It also includes helpers for measuring Erlang virtual machine
 metrics:
 
@@ -14,18 +14,18 @@ defmodule ExampleApp.Measurements do
   end
 end
 
-Telemetry.Sampler.start_link(
+Telemetry.Poller.start_link(
   measurements: [
     # include custom measurement
     {ExampleApp.Measurements, :dispatch_session_count, []}
     # include default VM measurements
-    | Telemetry.Sampler.vm_measurements()
+    | Telemetry.Poller.vm_measurements()
   ],
   period: 10_000 # configure sampling period
 )
 ```
 
-See [documentation](https://hexdocs.pm/telemetry_sampler) for more concrete examples and usage
+See [documentation](https://hexdocs.pm/telemetry_poller) for more concrete examples and usage
 instructions.
 
 ## Copyright and License

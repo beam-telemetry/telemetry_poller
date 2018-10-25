@@ -1,9 +1,9 @@
-defmodule Telemetry.Sampler.VMTest do
+defmodule Telemetry.Poller.VMTest do
   use ExUnit.Case
 
-  import Telemetry.Sampler.TestHelpers
+  import Telemetry.Poller.TestHelpers
 
-  alias Telemetry.Sampler.VM
+  alias Telemetry.Poller.VM
 
   test "total_memory/0 dispatches [:vm, :memory, :total] event with empty metadata" do
     empty_metadata = %{}

@@ -1,12 +1,12 @@
-defmodule Telemetry.Sampler.MixProject do
+defmodule Telemetry.Poller.MixProject do
   use Mix.Project
 
   @version "0.1.0"
 
   def project do
     [
-      app: :telemetry_sampler,
-      name: "Telemetry.Sampler",
+      app: :telemetry_poller,
+      name: "Telemetry.Poller",
       version: @version,
       elixir: "~> 1.4",
       start_permanent: Mix.env() == :prod,
@@ -50,9 +50,9 @@ defmodule Telemetry.Sampler.MixProject do
 
   defp docs do
     [
-      main: "Telemetry.Sampler",
-      canonical: "http://hexdocs.pm/telemetry_sampler",
-      source_url: "https://github.com/elixir-telemetry/telemetry_sampler",
+      main: "Telemetry.Poller",
+      canonical: "http://hexdocs.pm/telemetry_poller",
+      source_url: "https://github.com/elixir-telemetry/telemetry_poller",
       source_ref: "v#{@version}"
     ]
   end
@@ -67,7 +67,7 @@ defmodule Telemetry.Sampler.MixProject do
     [
       maintainers: ["Arkadiusz Gil", "José Valim"],
       licenses: ["Apache 2.0"],
-      links: %{"GitHub" => "https://github.com/elixir-telemetry/telemetry_sampler"}
+      links: %{"GitHub" => "https://github.com/elixir-telemetry/telemetry_poller"}
     ]
   end
 end

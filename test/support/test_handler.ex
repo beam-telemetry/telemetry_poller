@@ -1,4 +1,4 @@
-defmodule Telemetry.Sampler.TestHandler do
+defmodule Telemetry.Poller.TestHandler do
   @moduledoc false
 
   def handle(event, value, metadata, config) do
