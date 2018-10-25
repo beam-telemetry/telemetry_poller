@@ -1,28 +1,28 @@
-defmodule Telemetry.Sampler do
+defmodule Telemetry.Poller do
   @moduledoc """
-  A time-based sampler to periodically dispatch Telemetry events.
+  A time-based poller to periodically dispatch Telemetry events.
 
-  Measurements are MFAs called periodically by the Sampler process. These MFAs should collect
+  Measurements are MFAs called periodically by the Poller process. These MFAs should collect
   a value (if possible) and dispatch an event using `Telemetry.execute/3` function.
 
-  If the invokation of the MFA fails, the measurement is removed from the Sampler.
+  If the invokation of the MFA fails, the measurement is removed from the Poller.
 
   See the "Example - (...)" sections for more concrete examples.
 
   ## Starting and stopping
 
-  You can start the Sampler using the `start_link/1` function. Sampler can be alaso started as a
+  You can start the Poller using the `start_link/1` function. Poller can be alaso started as a
   part of your supervision tree, using both the old-style and the new-style child specifications:
 
       # pre Elixir 1.5.0
-      children = [Supervisor.Spec.worker(Telemetry.Sampler, [[period: 5000]])]
+      children = [Supervisor.Spec.worker(Telemetry.Poller, [[period: 5000]])]
 
       # post Elixir 1.5.0
-      children = [{Telemetry.Sampler, [period: 5000]}]
+      children = [{Telemetry.Poller, [period: 5000]}]
 
       Supervisor.start_link(children, [strategy: :one_for_one])
 
-  You can start as many Samplers as you wish, but generally you shouldn't need to do it, unless
+  You can start as many Pollers as you wish, but generally you shouldn't need to do it, unless
   you know that it's not keeping up with collecting all specified measurements.
 
   Measurements need to be provided via `:measurements` option.
@@ -74,11 +74,11 @@ defmodule Telemetry.Sampler do
         end
       end
 
-  Let's start the worker and Sampler with just defined measurement:
+  Let's start the worker and Poller with just defined measurement:
 
       iex> name = MyWorker
       iex> {:ok, pid} = Worker.start_link(name)
-      iex> Telemetry.Sampler.start_link(
+      iex> Telemetry.Poller.start_link(
       ...>   measurements: [{ExampleApp.Measurements, :message_queue_length, [MyWorker]}],
       ...>   period: 2000
       ...> )
@@ -148,9 +148,9 @@ defmodule Telemetry.Sampler do
         end
       end
 
-  and tell the Sampler to invoke it periodically:
+  and tell the Poller to invoke it periodically:
 
-      Telemetry.Sampler.start_link(measurements: [
+      Telemetry.Poller.start_link(measurements: [
         {ExampleApp.Measurements, :dispatch_session_count, []}
       ])
 
@@ -173,9 +173,9 @@ defmodule Telemetry.Sampler do
   > event handlers. If you can break down event value by some feature, like user role in this
   > example, it's usually better to use event metadata than add new events.
 
-  This is a perfect use case for Sampler, because you don't need to write a dedicated process
+  This is a perfect use case for Poller, because you don't need to write a dedicated process
   which would call these functions periodically. Additionally, if you find that you need to collect
-  more statistics like this in the future, you can easily hook them up to the same Sampler process
+  more statistics like this in the future, you can easily hook them up to the same Poller process
   and avoid creating lots of processes which would stay idle most of the time.
   """
 
@@ -225,18 +225,18 @@ defmodule Telemetry.Sampler do
   ## API
 
   @doc """
-  Returns a child specifiction for Sampler.
+  Returns a child specifiction for Poller.
 
   It accepts `t:options/0` as an argument, meaning that it's valid to start it under the supervisor
   as follows:
 
-      alias Telemetry.Sampler
+      alias Telemetry.Poller
       # use default options
-      Supervisor.start_link([Sampler], supervisor_opts) # use default options
+      Supervisor.start_link([Poller], supervisor_opts) # use default options
       # customize options
-      Supervisor.start_link([{Sampler, period: 10_000}], supervisor_opts)
+      Supervisor.start_link([{Poller, period: 10_000}], supervisor_opts)
       # modify the child spec
-      Supervisor.start_link(Supervisor.child_spec(Sampler, id: MySampler), supervisor_opts)
+      Supervisor.start_link(Supervisor.child_spec(Poller, id: MyPoller), supervisor_opts)
   """
   # Uncomment when dropping support for 1.4.x releases.
   # @spec child_spec(term()) :: Supervisor.child_spec()
@@ -250,41 +250,41 @@ defmodule Telemetry.Sampler do
   end
 
   @doc """
-  Starts a Sampler linked to the calling process.
+  Starts a Poller linked to the calling process.
 
-  Useful for starting Samplers as a part of a supervision tree.
+  Useful for starting Pollers as a part of a supervision tree.
 
   ### Options
 
-  * `:measurements` - a list of measurements used by Sampler. For description of possible values
-    see `Telemetry.Sampler` module documentation;
+  * `:measurements` - a list of measurements used by Poller. For description of possible values
+    see `Telemetry.Poller` module documentation;
   * `:period` - time period before performing the same measurement again, in milliseconds. Default
     value is #{@default_period} ms;
-  * `:name` - the name of the Sampler process. See "Name Registragion" section of `GenServer`
+  * `:name` - the name of the Poller process. See "Name Registragion" section of `GenServer`
     documentation for information about allowed values.
   """
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options \\ []) when is_list(options) do
-    {sampler_opts, gen_server_opts} = parse_options!(options)
-    GenServer.start_link(__MODULE__, sampler_opts, gen_server_opts)
+    {poller_opts, gen_server_opts} = parse_options!(options)
+    GenServer.start_link(__MODULE__, poller_opts, gen_server_opts)
   end
 
   @doc """
-  Stops the `sampler` with specified `reason`.
+  Stops the `poller` with specified `reason`.
 
   See documentation for `GenServer.stop/3` to learn more about the behaviour of this function.
   """
   @spec stop(t(), reason :: term(), timeout()) :: :ok
-  def stop(sampler, reason \\ :normal, timeout \\ :infinity) do
-    GenServer.stop(sampler, reason, timeout)
+  def stop(poller, reason \\ :normal, timeout \\ :infinity) do
+    GenServer.stop(poller, reason, timeout)
   end
 
   @doc """
-  Returns a list of measurements used by the sampler.
+  Returns a list of measurements used by the poller.
   """
   @spec list_measurements(t()) :: [measurement()]
-  def list_measurements(sampler) do
-    GenServer.call(sampler, :get_measurements)
+  def list_measurements(poller) do
+    GenServer.call(poller, :get_measurements)
   end
 
   @doc """
@@ -334,9 +334,9 @@ defmodule Telemetry.Sampler do
 
   ## Examples
 
-      alias Telemetry.Sampler
-      Sampler.start_link(
-        measurements: Sampler.vm_measurements() ++ Sampler.vm_measurements(:atom_memory)
+      alias Telemetry.Poller
+      Poller.start_link(
+        measurements: Poller.vm_measurements() ++ Poller.vm_measurements(:atom_memory)
       )
   """
   @spec vm_measurements([vm_measurement()]) :: [measurement()]
@@ -394,7 +394,7 @@ defmodule Telemetry.Sampler do
     raise ArgumentError, "Expected :measurements to be a list, got #{inspect(other)}"
   end
 
-  @spec validate_measurement!(term()) :: measurement() | no_return()
+  @spec validate_measurement!(term()) :: :ok | no_return()
   defp validate_measurement!({m, f, a})
        when is_atom(m) and is_atom(f) and is_list(a) do
     :ok
@@ -445,7 +445,7 @@ defmodule Telemetry.Sampler do
     Enum.map(vm_measurements, &parse_vm_measurement!/1)
   end
 
-  @spec parse_vm_measurement!(term()) :: [measurement()] | no_return()
+  @spec parse_vm_measurement!(term()) :: measurement() | no_return()
   defp parse_vm_measurement!(memory) when memory in @vm_memory_measurements do
     vm_measurement(memory)
   end
@@ -454,8 +454,9 @@ defmodule Telemetry.Sampler do
     raise ArgumentError, "Expected VM measurement, got #{inspect(other)}"
   end
 
+  @spec vm_measurement(function :: atom()) :: measurement()
   @spec vm_measurement(function :: atom(), args :: list()) :: measurement()
   defp vm_measurement(function, args \\ []) do
-    {Telemetry.Sampler.VM, function, args}
+    {Telemetry.Poller.VM, function, args}
   end
 end

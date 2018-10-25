@@ -1,5 +1,5 @@
-defmodule Telemetry.Sampler.TestHelpers do
-  alias Telemetry.Sampler.TestHandler
+defmodule Telemetry.Poller.TestHelpers do
+  alias Telemetry.Poller.TestHandler
 
   @doc """
   Asserts that invokation of given function results in event, whose value and metadata match the

@@ -1,4 +1,4 @@
-defmodule Telemetry.Sampler.VM do
+defmodule Telemetry.Poller.VM do
   @moduledoc false
 
   @spec total_memory() :: :ok
