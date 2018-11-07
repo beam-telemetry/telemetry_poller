@@ -52,7 +52,7 @@ defmodule Telemetry.Poller.MixProject do
     [
       main: "Telemetry.Poller",
       canonical: "http://hexdocs.pm/telemetry_poller",
-      source_url: "https://github.com/elixir-telemetry/telemetry_poller",
+      source_url: "https://github.com/beam-telemetry/telemetry_poller",
       source_ref: "v#{@version}"
     ]
   end
@@ -67,7 +67,7 @@ defmodule Telemetry.Poller.MixProject do
     [
       maintainers: ["Arkadiusz Gil", "José Valim"],
       licenses: ["Apache 2.0"],
-      links: %{"GitHub" => "https://github.com/elixir-telemetry/telemetry_poller"}
+      links: %{"GitHub" => "https://github.com/beam-telemetry/telemetry_poller"}
     ]
   end
 end
