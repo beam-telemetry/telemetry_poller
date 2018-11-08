@@ -4,12 +4,13 @@ defmodule Telemetry.Poller.Application do
   def start(_type, _args) do
     import Supervisor.Spec, only: [worker: 2]
 
-    default_poller_opts =
-      Application.get_env(:telemetry_poller, :default, name: Telemetry.Poller.Default)
+    poller_opts =
+      Application.get_env(:telemetry_poller, :default, [])
 
     children =
-      if default_poller_opts do
-        [worker(Telemetry.Poller, [default_poller_opts])]
+      if poller_opts do
+        poller_opts = Keyword.merge([name: Telemetry.Poller.Default], poller_opts)
+        [worker(Telemetry.Poller, [poller_opts])]
       else
         []
       end
