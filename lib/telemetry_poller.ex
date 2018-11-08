@@ -301,7 +301,7 @@ defmodule Telemetry.Poller do
   * `:measurements` - a list of measurements used by Poller. For description of possible values
     see `Telemetry.Poller` module documentation;
   * `:vm_measurements` - a list of atoms describing measurements related to the Erlang VM, or an
-    atom `:default` in which case default VM measurements are used. See "VM measurements" section in
+    atom `:default`, in which case default VM measurements are used. See "VM measurements" section in
     the module documentation for more information. Default value is `:default`;
   * `:period` - time period before performing the same measurement again, in milliseconds. Default
     value is #{@default_period} ms;
@@ -384,7 +384,7 @@ defmodule Telemetry.Poller do
   end
 
   defp validate_measurements!(other) do
-    raise ArgumentError, "Expected :measurements to be a list, got #{inspect(other)}"
+    raise ArgumentError, "expected :measurements to be a list, got #{inspect(other)}"
   end
 
   @spec validate_measurement!(term()) :: :ok | no_return()
@@ -395,14 +395,14 @@ defmodule Telemetry.Poller do
 
   defp validate_measurement!(invalid_measurement) do
     raise ArgumentError,
-          "Expected measurement, got #{inspect(invalid_measurement)}"
+          "expected measurement, got #{inspect(invalid_measurement)}"
   end
 
   @spec validate_period!(term()) :: :ok | no_return()
   defp validate_period!(period) when is_integer(period) and period > 0, do: :ok
 
   defp validate_period!(other),
-    do: raise(ArgumentError, "Expected :period to be a postivie integer, got #{inspect(other)}")
+    do: raise(ArgumentError, "expected :period to be a postivie integer, got #{inspect(other)}")
 
   @spec schedule_measurement(collect_in_millis :: non_neg_integer()) :: :ok
   defp schedule_measurement(collect_in_millis) do
