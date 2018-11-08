@@ -3,29 +3,10 @@ defmodule Telemetry.Poller do
   A time-based poller to periodically dispatch Telemetry events.
 
   Measurements are MFAs called periodically by the Poller process. These MFAs should collect
-  a value (if possible) and dispatch an event using `Telemetry.execute/3` function.
-
-  If the invokation of the MFA fails, the measurement is removed from the Poller.
+  a value (if possible) and dispatch an event using `Telemetry.execute/3` function. If the
+  invokation of the MFA fails, the measurement is removed from the Poller.
 
   See the "Example - (...)" sections for more concrete examples.
-
-  ## Starting and stopping
-
-  You can start the Poller using the `start_link/1` function. Poller can be alaso started as a
-  part of your supervision tree, using both the old-style and the new-style child specifications:
-
-      # pre Elixir 1.5.0
-      children = [Supervisor.Spec.worker(Telemetry.Poller, [[period: 5000]])]
-
-      # post Elixir 1.5.0
-      children = [{Telemetry.Poller, [period: 5000]}]
-
-      Supervisor.start_link(children, [strategy: :one_for_one])
-
-  You can start as many Pollers as you wish, but generally you shouldn't need to do it, unless
-  you know that it's not keeping up with collecting all specified measurements.
-
-  MFA measurements need to be provided via `:measurements` option.
 
   ## VM measurements
 
@@ -72,6 +53,33 @@ defmodule Telemetry.Poller do
       Poller.start_link(
         vm_measurements: [:total_memory, :processes_memory, :atom_memory]
       )
+
+  ## Starting and stopping
+
+  By default a single Poller is started under `Telemetry.Poller` application. It is started with
+  a default set of options and a name `Telemetry.Poller.Default`. You can configure the default
+  Poller using application environment:
+
+      config :telemetry_poller, :default,
+        measurements: [{ExampleApp.Measurements, :measurement, []}]
+
+  The default Poller can be disabled by setting `:default` key to `false`:
+
+      config :telemetry_poller, default: false
+
+  You can start your own Poller using the `start_link/1` function. Poller can be alaso started as a
+  part of your supervision tree, using both the old-style and the new-style child specifications:
+
+      # pre Elixir 1.5.0
+      children = [Supervisor.Spec.worker(Telemetry.Poller, [[period: 5000]])]
+
+      # post Elixir 1.5.0
+      children = [{Telemetry.Poller, [period: 5000]}]
+
+      Supervisor.start_link(children, [strategy: :one_for_one])
+
+  You can start as many Pollers as you wish, but generally you shouldn't need to do it, unless
+  you know that it's not keeping up with collecting all specified measurements.
 
   ## Example - measuring message queue length of the process
 
