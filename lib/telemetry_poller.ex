@@ -25,12 +25,53 @@ defmodule Telemetry.Poller do
   You can start as many Pollers as you wish, but generally you shouldn't need to do it, unless
   you know that it's not keeping up with collecting all specified measurements.
 
-  Measurements need to be provided via `:measurements` option.
+  MFA measurements need to be provided via `:measurements` option.
 
   ## VM measurements
 
-  The `vm_measurements/1` function returns common measurements related to Erlang virtual machine
-  metrics. See its documentation for more information.
+  Besides regular MFA measurements, Poller also accepts a list of atoms describing measurements
+  related to Erlang virtual machine. VM measurements need to be provided via `:vm_measurements`
+  option. Below you can find a list of available measurements.
+
+  ### Available measurements
+
+  #### Memory
+
+  See documentation for `:erlang.memory/0` function for more information about each type of memory
+  measured.
+
+  * `:total_memory` - dispatches an event with total amount of currently allocated memory, in bytes.
+  Event name is `[:vm, :memory, :total]` and event metadata is empty;
+  * `:processes_memory` - dispatches an event with amount of memory cyrrently allocated for
+    processes, in bytes. Event name is `[:vm, :memory, :processes]` and event metadata is empty;
+  * `:processes_used_memory` - dispatches an event with amount of memory currently used for
+    processes, in bytes. Event name is `[:vm, :memory, :processes_used]` and event metadata is empty.
+    Memory measured is a fraction of value collected by `:processes_memory` measurement;
+  * `:binary_memory` - dispatches an event with amount of memory currently allocated for binaries.
+    Event name is `[:vm, :memory, :binary]` and event metadata is empty;
+  * `:ets_memory` - dispatches an event with amount of memory currently allocated for ETS tables.
+    Event name is `[:vm, :memory, :ets]` and event metadata is empty;
+  * `:system_memory` - dispatches an event with amount of currently allocated memory not directly
+    related to any process running in the VM, in bytes. Event name is `[:vm, :memory, :system]` and
+    event metadata is empty;
+  * `:atom_memory` - dispatches an event with amount of memory currently allocated for atoms. Event
+    name is `[:vm, :memory, :atom]` and event metadata is empty;
+  * `:atom_used_memory` - dispatches an event with amount of memory currently used for atoms. Event
+    name is `[:vm, :memory, :atom_used]` and event metadata is empty;
+  * `:code_memory` - dispatches an event with amount of memory currently allocated for code. Event
+    name is `[:vm, :memory, :code]` and event metadata is empty;
+
+  ### Default measurements
+
+  By default Poller uses `:total_memory`, `:processes_memory`, `:processes_used_memory`,
+  `:binary_memory` and `:ets_memory` VM measurements.
+
+  ### Example
+
+      alias Telemetry.Poller
+      Poller.start_link(
+        vm_measurements: [:total_memory, :processes_memory, :atom_memory]
+      )
 
   ## Example - measuring message queue length of the process
 
@@ -209,6 +250,7 @@ defmodule Telemetry.Poller do
           {:name, GenServer.name()}
           | {:period, period()}
           | {:measurements, [measurement()]}
+          | {:vm_measurements, :default | [vm_measurement()]}
   @type period :: pos_integer()
   @type measurement() :: mfa()
   @type vm_measurement() ::
@@ -254,10 +296,13 @@ defmodule Telemetry.Poller do
 
   Useful for starting Pollers as a part of a supervision tree.
 
-  ### Options
+  ## Options
 
   * `:measurements` - a list of measurements used by Poller. For description of possible values
     see `Telemetry.Poller` module documentation;
+  * `:vm_measurements` - a list of atoms describing measurements related to the Erlang VM, or an
+    atom `:default` in which case default VM measurements are used. See "VM measurements" section in
+    the module documentation for more information. Default value is `:default`;
   * `:period` - time period before performing the same measurement again, in milliseconds. Default
     value is #{@default_period} ms;
   * `:name` - the name of the Poller process. See "Name Registragion" section of `GenServer`
@@ -285,65 +330,6 @@ defmodule Telemetry.Poller do
   @spec list_measurements(t()) :: [measurement()]
   def list_measurements(poller) do
     GenServer.call(poller, :get_measurements)
-  end
-
-  @doc """
-  Returns measurements dispatching events with Erlang virtual machine metrics
-
-  It accepts a list `t:vm_measurement/0`s and returns a list of `t:measurement/0`s which can
-  be provided to `start_link/1`'s `:measurements` option.
-
-  Do not rely on the exact values returned by this function - the only guarantee is that they
-  are of type `t:measurement/0` and their modification will not be considered a breaking change,
-  unless the shape of events dispatched by returned measurements changes.
-
-  Returned measurements are unique.
-
-  ## Available measurements
-
-  ### Memory
-
-  See documentation for `:erlang.memory/0` function for more information about each type of memory
-  measured.
-
-  * `:total_memory` - dispatches an event with total amount of currently allocated memory, in bytes.
-  Event name is `[:vm, :memory, :total]` and event metadata is empty;
-  * `:processes_memory` - dispatches an event with amount of memory cyrrently allocated for
-    processes, in bytes. Event name is `[:vm, :memory, :processes]` and event metadata is empty;
-  * `:processes_used_memory` - dispatches an event with amount of memory currently used for
-    processes, in bytes. Event name is `[:vm, :memory, :processes_used]` and event metadata is empty.
-    Memory measured is a fraction of value collected by `:processes_memory` measurement;
-  * `:binary_memory` - dispatches an event with amount of memory currently allocated for binaries.
-    Event name is `[:vm, :memory, :binary]` and event metadata is empty;
-  * `:ets_memory` - dispatches an event with amount of memory currently allocated for ETS tables.
-    Event name is `[:vm, :memory, :ets]` and event metadata is empty;
-  * `:system_memory` - dispatches an event with amount of currently allocated memory not directly
-    related to any process running in the VM, in bytes. Event name is `[:vm, :memory, :system]` and
-    event metadata is empty;
-  * `:atom_memory` - dispatches an event with amount of memory currently allocated for atoms. Event
-    name is `[:vm, :memory, :atom]` and event metadata is empty;
-  * `:atom_used_memory` - dispatches an event with amount of memory currently used for atoms. Event
-    name is `[:vm, :memory, :atom_used]` and event metadata is empty;
-  * `:code_memory` - dispatches an event with amount of memory currently allocated for code. Event
-    name is `[:vm, :memory, :code]` and event metadata is empty;
-
-  ## Default measurements
-
-  The 0-arity version of this function includes `:total_memory`, `:processes_memory`,
-  `:processes_used_memory`, `:binary_memory` and `:ets_memory` measurements by default.
-
-  ## Examples
-
-      alias Telemetry.Poller
-      Poller.start_link(
-        measurements: Poller.vm_measurements() ++ Poller.vm_measurements(:atom_memory)
-      )
-  """
-  @spec vm_measurements([vm_measurement()]) :: [measurement()]
-  def vm_measurements(vm_measurements \\ @default_vm_measurements)
-      when is_list(vm_measurements) do
-    measurements = parse_vm_measurements!(vm_measurements)
-    Enum.uniq(measurements)
   end
 
   ## GenServer callbacks
@@ -379,9 +365,16 @@ defmodule Telemetry.Poller do
     gen_server_opts = Keyword.take(options, [:name])
     measurements = Keyword.get(options, :measurements, [])
     validate_measurements!(measurements)
+
+    vm_measurements =
+      options
+      |> Keyword.get(:vm_measurements, :default)
+      |> parse_vm_measurements!()
+      |> Enum.uniq()
+
     period = Keyword.get(options, :period, @default_period)
     validate_period!(period)
-    {[measurements: measurements, period: period], gen_server_opts}
+    {[measurements: measurements ++ vm_measurements, period: period], gen_server_opts}
   end
 
   @spec validate_measurements!(term()) :: :ok | no_return()
@@ -440,7 +433,11 @@ defmodule Telemetry.Poller do
       :error
   end
 
-  @spec parse_vm_measurements!([term()]) :: [measurement()] | no_return()
+  @spec parse_vm_measurements!(term()) :: [measurement()] | no_return()
+  defp parse_vm_measurements!(:default) do
+    parse_vm_measurements!(@default_vm_measurements)
+  end
+
   defp parse_vm_measurements!(vm_measurements) do
     Enum.map(vm_measurements, &parse_vm_measurement!/1)
   end
@@ -451,7 +448,7 @@ defmodule Telemetry.Poller do
   end
 
   defp parse_vm_measurement!(other) do
-    raise ArgumentError, "Expected VM measurement, got #{inspect(other)}"
+    raise ArgumentError, "unknown VM measurement #{inspect(other)}"
   end
 
   @spec vm_measurement(function :: atom()) :: measurement()
