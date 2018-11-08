@@ -66,7 +66,9 @@ defmodule Telemetry.PollerTest do
     measurement1 = {Telemetry.Poller.VM, :memory, []}
     measurement2 = {TestMeasure, :single_sample, [[:a, :second, :test, :event], 1, %{}]}
 
-    {:ok, poller} = Poller.start_link(measurements: [measurement1, measurement2])
+    {:ok, poller} =
+      Poller.start_link(measurements: [measurement1, measurement2])
+
     measurements = Poller.list_measurements(poller)
 
     assert measurement1 in measurements
@@ -84,57 +86,75 @@ defmodule Telemetry.PollerTest do
   end
 
   test "poller can be started under supervisor using the old-style child spec" do
-    measurements = [{Telemetry.Poller.VM, :memory, []}]
+    measurement = {Telemetry.Poller.VM, :memory, []}
     child_id = MyPoller
-    children = [Supervisor.Spec.worker(Poller, [[measurements: measurements]], id: child_id)]
+    children = [Supervisor.Spec.worker(Poller, [[measurements: [measurement]]], id: child_id)]
 
     {:ok, sup} = Supervisor.start_link(children, strategy: :one_for_one)
 
     assert [{^child_id, poller, :worker, [Poller]}] = Supervisor.which_children(sup)
-    assert measurements == Poller.list_measurements(poller)
+    assert measurement in Poller.list_measurements(poller)
   end
 
   @tag :elixir_1_5_child_specs
   test "poller can be started under supervisor using the new-style child spec" do
-    measurements = [{Telemetry.Poller.VM, :memory, []}]
+    measurement = {Telemetry.Poller.VM, :memory, []}
     child_id = MyPoller
-    children = [Supervisor.child_spec({Poller, measurements: measurements}, id: child_id)]
+    children = [Supervisor.child_spec({Poller, measurements: [measurement]}, id: child_id)]
 
     {:ok, sup} = Supervisor.start_link(children, strategy: :one_for_one)
 
     assert [{^child_id, poller, :worker, [Poller]}] = Supervisor.which_children(sup)
-    assert measurements == Poller.list_measurements(poller)
+    assert measurement in Poller.list_measurements(poller)
   end
 
-  describe "vm_measurements/1" do
-    for memory_type <- [
-          :total_memory,
-          :processes_memory,
-          :processes_used_memory,
-          :system_memory,
-          :atom_memory,
-          :atom_used_memory,
-          :binary_memory,
-          :code_memory,
-          :ets_memory
-        ] do
-      test "translates #{inspect(memory_type)} atom to measurement" do
-        assert [{_, _, _}] = Poller.vm_measurements([unquote(memory_type)])
-      end
-    end
+  test "poller can be given :default VM measurements" do
+    measurement_funs = [
+      :total_memory,
+      :processes_memory,
+      :processes_used_memory,
+      :ets_memory,
+      :binary_memory
+    ]
 
-    test "raises when given unknown VM measurement" do
-      assert_raise ArgumentError, fn ->
-        Poller.vm_measurements([:cpu_usage])
-      end
+    {:ok, poller} = Poller.start_link(vm_measurements: :default)
+    measurements = Poller.list_measurements(poller)
 
-      assert_raise ArgumentError, fn ->
-        Poller.vm_measurements([{:message_queue_length, [MyProcess]}])
-      end
-    end
+    assert length(measurement_funs) == length(measurements)
 
-    test "returns unique measurements" do
-      assert [{_, _, _}] = Poller.vm_measurements([:total_memory, :total_memory])
+    for measurement_fun <- measurement_funs do
+      assert {Telemetry.Poller.VM, measurement_fun, []} in measurements
     end
+  end
+
+  test "poller can be given a list of VM measurements" do
+    vm_measurements = [
+      :total_memory,
+      :processes_memory,
+      :processes_used_memory,
+      :system_memory,
+      :atom_memory,
+      :atom_used_memory,
+      :binary_memory,
+      :code_memory,
+      :ets_memory
+    ]
+
+    {:ok, poller} = Poller.start_link(vm_measurements: vm_measurements)
+
+    assert length(vm_measurements) == length(Poller.list_measurements(poller))
+  end
+
+  @tag :capture_log
+  test "poller doesn't start given invalid VM measurement" do
+    assert_raise ArgumentError, fn ->
+      Poller.start_link(vm_measurements: [:cpu_usage])
+    end
+  end
+
+  test "poller registers unique VM measurements" do
+    {:ok, poller} = Poller.start_link(vm_measurements: [:total_memory, :total_memory])
+
+    assert 1 == length(Poller.list_measurements(poller))
   end
 end

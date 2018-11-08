@@ -22,6 +22,7 @@ defmodule Telemetry.Poller.MixProject do
 
   def application do
     [
+      mod: {Telemetry.Poller.Application, []},
       extra_applications: [:logger]
     ]
   end

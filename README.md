@@ -15,12 +15,12 @@ defmodule ExampleApp.Measurements do
 end
 
 Telemetry.Poller.start_link(
+  # include custom measurement
   measurements: [
-    # include custom measurement
     {ExampleApp.Measurements, :dispatch_session_count, []}
-    # include default VM measurements
-    | Telemetry.Poller.vm_measurements()
   ],
+  # include default VM measurements
+  vm_measurements: :default,
   period: 10_000 # configure sampling period
 )
 ```
