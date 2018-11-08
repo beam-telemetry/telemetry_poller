@@ -44,8 +44,8 @@ defmodule Telemetry.Poller do
 
   ### Default measurements
 
-  By default Poller uses `:total_memory`, `:processes_memory`, `:processes_used_memory`,
-  `:binary_memory` and `:ets_memory` VM measurements.
+  When `:default` is provided as the value of `:vm_measurement` options, Poller uses `:total_memory`,
+  `:processes_memory`, `:processes_used_memory`, `:binary_memory` and `:ets_memory` VM measurements.
 
   ### Example
 
@@ -57,11 +57,13 @@ defmodule Telemetry.Poller do
   ## Starting and stopping
 
   By default a single Poller is started under `Telemetry.Poller` application. It is started with
-  a default set of options and a name `Telemetry.Poller.Default`. You can configure the default
+  name `Telemetry.Poller.Default` and default set of VM measurements. You can configure the default
   Poller using application environment:
 
       config :telemetry_poller, :default,
         measurements: [{ExampleApp.Measurements, :measurement, []}]
+
+  Provided options will be merged with the defaults.
 
   The default Poller can be disabled by setting `:default` key to `false`:
 
@@ -310,7 +312,7 @@ defmodule Telemetry.Poller do
     see `Telemetry.Poller` module documentation;
   * `:vm_measurements` - a list of atoms describing measurements related to the Erlang VM, or an
     atom `:default`, in which case default VM measurements are used. See "VM measurements" section in
-    the module documentation for more information. Default value is `:default`;
+    the module documentation for more information. Default value is `[]`;
   * `:period` - time period before performing the same measurement again, in milliseconds. Default
     value is #{@default_period} ms;
   * `:name` - the name of the Poller process. See "Name Registragion" section of `GenServer`
@@ -376,7 +378,7 @@ defmodule Telemetry.Poller do
 
     vm_measurements =
       options
-      |> Keyword.get(:vm_measurements, :default)
+      |> Keyword.get(:vm_measurements, [])
       |> parse_vm_measurements!()
       |> Enum.uniq()
 

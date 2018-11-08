@@ -67,7 +67,7 @@ defmodule Telemetry.PollerTest do
     measurement2 = {TestMeasure, :single_sample, [[:a, :second, :test, :event], 1, %{}]}
 
     {:ok, poller} =
-      Poller.start_link(measurements: [measurement1, measurement2], vm_measurements: [])
+      Poller.start_link(measurements: [measurement1, measurement2])
 
     measurements = Poller.list_measurements(poller)
 
@@ -80,7 +80,7 @@ defmodule Telemetry.PollerTest do
   test "measurement is removed from poller if it raises" do
     invalid_measurement = {TestMeasure, :raise, []}
 
-    {:ok, poller} = Poller.start_link(measurements: [invalid_measurement], vm_measurements: [])
+    {:ok, poller} = Poller.start_link(measurements: [invalid_measurement])
 
     assert eventually(fn -> [] == Poller.list_measurements(poller) end)
   end
@@ -108,17 +108,21 @@ defmodule Telemetry.PollerTest do
     assert measurement in Poller.list_measurements(poller)
   end
 
-  test "poller starts with a default set of VM measurements" do
-    {:ok, poller} = Poller.start_link()
+  test "poller can be given :default VM measurements" do
+    measurement_funs = [
+      :total_memory,
+      :processes_memory,
+      :processes_used_memory,
+      :ets_memory,
+      :binary_memory
+    ]
+
+    {:ok, poller} = Poller.start_link(vm_measurements: :default)
     measurements = Poller.list_measurements(poller)
 
-    for measurement_fun <- [
-          :total_memory,
-          :processes_memory,
-          :processes_used_memory,
-          :ets_memory,
-          :binary_memory
-        ] do
+    assert length(measurement_funs) == length(measurements)
+
+    for measurement_fun <- measurement_funs do
       assert {Telemetry.Poller.VM, measurement_fun, []} in measurements
     end
   end

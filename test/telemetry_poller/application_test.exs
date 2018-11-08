@@ -21,14 +21,15 @@ defmodule Telemetry.Poller.ApplicationTest do
     :ok
   end
 
-  test "default poller is started with preconfigured name" do
+  test "default poller is started with preconfigured name and VM measurements" do
     poller = Telemetry.Poller.Default
 
     Application.delete_env(:telemetry_poller, :default)
     Application.ensure_all_started(:telemetry_poller)
 
     assert eventually(fn -> not is_nil(Process.whereis(poller)) end)
-    assert Poller.list_measurements(Telemetry.Poller.Default)
+    measurements = Poller.list_measurements(Telemetry.Poller.Default)
+    assert Enum.all?(measurements, fn {mod, _, _} -> mod == Telemetry.Poller.VM end)
   end
 
   test "default poller can be configured using application environment" do
