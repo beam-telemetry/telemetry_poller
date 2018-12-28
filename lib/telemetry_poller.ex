@@ -88,7 +88,8 @@ defmodule Telemetry.Poller do
   ### Default measurements
 
   When `:default` is provided as the value of `:vm_measurement` options, Poller uses `:total_memory`,
-  `:processes_memory`, `:processes_used_memory`, `:binary_memory` and `:ets_memory` VM measurements.
+  `:processes_memory`, `:processes_used_memory`, `:binary_memory`, `:ets_memory`
+  and `:total_run_queue_lengths` VM measurements.
 
   ### Example
 
