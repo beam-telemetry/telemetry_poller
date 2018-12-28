@@ -66,8 +66,7 @@ defmodule Telemetry.PollerTest do
     measurement1 = {Telemetry.Poller.VM, :memory, []}
     measurement2 = {TestMeasure, :single_sample, [[:a, :second, :test, :event], 1, %{}]}
 
-    {:ok, poller} =
-      Poller.start_link(measurements: [measurement1, measurement2])
+    {:ok, poller} = Poller.start_link(measurements: [measurement1, measurement2])
 
     measurements = Poller.list_measurements(poller)
 
@@ -114,7 +113,8 @@ defmodule Telemetry.PollerTest do
       :processes_memory,
       :processes_used_memory,
       :ets_memory,
-      :binary_memory
+      :binary_memory,
+      :total_run_queue_lengths
     ]
 
     {:ok, poller} = Poller.start_link(vm_measurements: :default)
@@ -137,7 +137,9 @@ defmodule Telemetry.PollerTest do
       :atom_used_memory,
       :binary_memory,
       :code_memory,
-      :ets_memory
+      :ets_memory,
+      :total_run_queue_lengths,
+      :run_queue_lengths
     ]
 
     {:ok, poller} = Poller.start_link(vm_measurements: vm_measurements)
