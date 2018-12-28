@@ -1,10 +1,18 @@
 elixir_vsn = System.version()
+{otp_release, _} = Integer.parse(System.otp_release())
 
-config =
+exclude =
   if Version.match?(elixir_vsn, "~> 1.5") do
     []
   else
-    [exclude: :elixir_1_5_child_specs]
+    [:elixir_1_5_child_specs]
   end
 
-ExUnit.start(config)
+exclude =
+  if otp_release < 20 do
+    [:dirty_schedulers | exclude]
+  else
+    exclude
+  end
+
+ExUnit.start(exclude: exclude)

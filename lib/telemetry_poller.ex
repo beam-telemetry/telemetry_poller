@@ -42,10 +42,54 @@ defmodule Telemetry.Poller do
   * `:code_memory` - dispatches an event with amount of memory currently allocated for code. Event
     name is `[:vm, :memory, :code]` and event metadata is empty;
 
+  #### Run queue lengths
+
+  On startup, the Erlang VM starts many schedulers to do both IO and CPU work. If a process
+  needs to do some work or wait on IO, it is allocated to the appropriate scheduler. The run
+  queue is a queue of tasks to be scheduled. A length of a run queue corresponds to the amount
+  of work accumulated in the system. If a run queue length is constantly growing, it means that
+  the BEAM is not keeping up with executing all the tasks.
+
+  There are several run queue types in the Erlang VMe. Each CPU scheduler (usually one per core)
+  has its own run queue, and since Erlang 20.0 there is one dirty CPU run queue, and one dirty
+  IO run queue.
+
+  The following VM measurements related to run queue lengths are available:
+
+  * `:total_run_queue_lengths` - dispatches an event with a sum of normal schedulers' run queue lengths
+    and a dirty CPU run queue length (if dirty schedulers are available). Event name is
+    `[:vm, run_queue_lengths, :total]` and event metadata is empty.
+
+    Note that the method of making this measurement varies between different Erlang versions: for
+    Erlang 18 and 19, the implementation is less efficient than for version 20 and up.
+
+    The length of all queues is not gathered atomically, so the event value does not represent
+    a consistent snapshot of the run queues' state. However, the value is accurate enough to help
+    to indentify issues in a running system.
+
+  * `:run_queue_lengths` - dispatches events with individual normal run queue lengths and a dirty
+    CPU run queue length (if dirty schedulers are available).
+
+    For normal run queues, event name is `[:vm, run_queue_lengths, :normal]` and event metadata
+    includes a single key, `:scheduler_id`, with the scheduler ID of the queue. Note that number
+    of schedulers is fixed at virtual machine boot time, so the number of events emitted on each
+    measurement is constant.
+
+    For dirty CPU run queue, the event name is `[:vm, :run_queue_lengths, :dirty_cpu]` and the
+    event metadata is empty.
+
+    The length of all queues is not gathered atomically, so the event values do not represent
+    a consistent snapshot of the run queues' state. However, the value is accurate enough to help
+    to indentify issues in a running system.
+
+    If you do not need the individual run queue lengths, it is more efficient to use
+    `:total_run_queue_lengths` measurement.
+
   ### Default measurements
 
   When `:default` is provided as the value of `:vm_measurement` options, Poller uses `:total_memory`,
-  `:processes_memory`, `:processes_used_memory`, `:binary_memory` and `:ets_memory` VM measurements.
+  `:processes_memory`, `:processes_used_memory`, `:binary_memory`, `:ets_memory`
+  and `:total_run_queue_lengths` VM measurements.
 
   ### Example
 
@@ -240,9 +284,10 @@ defmodule Telemetry.Poller do
     :processes_memory,
     :processes_used_memory,
     :binary_memory,
-    :ets_memory
+    :ets_memory,
+    :total_run_queue_lengths
   ]
-  @vm_memory_measurements [
+  @vm_measurements [
     :total_memory,
     :processes_memory,
     :processes_used_memory,
@@ -251,7 +296,9 @@ defmodule Telemetry.Poller do
     :atom_used_memory,
     :binary_memory,
     :code_memory,
-    :ets_memory
+    :ets_memory,
+    :total_run_queue_lengths,
+    :run_queue_lengths
   ]
 
   @type t :: GenServer.server()
@@ -453,7 +500,7 @@ defmodule Telemetry.Poller do
   end
 
   @spec parse_vm_measurement!(term()) :: measurement() | no_return()
-  defp parse_vm_measurement!(memory) when memory in @vm_memory_measurements do
+  defp parse_vm_measurement!(memory) when memory in @vm_measurements do
     vm_measurement(memory)
   end
 
