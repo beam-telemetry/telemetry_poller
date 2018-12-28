@@ -72,6 +72,9 @@ defmodule Telemetry.Poller do
       For dirty CPU run queue, the event name is `[:vm, :run_queues_length, :dirty_cpu]` and the
       event metadata is empty.
 
+      If you do not need the individual run queue lengths, it is more efficient to use
+      `:total_run_queue_lengths` measurement.
+
   ### Default measurements
 
   When `:default` is provided as the value of `:vm_measurement` options, Poller uses `:total_memory`,
