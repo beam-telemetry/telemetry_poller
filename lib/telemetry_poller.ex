@@ -42,7 +42,7 @@ defmodule Telemetry.Poller do
   * `:code_memory` - dispatches an event with amount of memory currently allocated for code. Event
     name is `[:vm, :memory, :code]` and event metadata is empty;
 
-  #### Run queues length
+  #### Run queue lengths
 
   A run queue is a queue of tasks which are going to be scheduled on a particular scheduler
   (although processes can be migrated between the run queues of the same type). A length of a run
@@ -61,6 +61,10 @@ defmodule Telemetry.Poller do
       Note that the method of making this measurement varies between different Erlang versions: for
       Erlang 18 and 19, the implementation is less efficient than for version 20 and up.
 
+      The length of all queues is not gathered atomically, so the event value does not represent
+      a consistent snapshot of the run queues' state. However, the value is accurate enough to help
+      to indentify issues in a running system.
+
   * `:run_queue_lengths` - dispatches events with individual normal run queue lengths and a dirty
     CPU run queue length (if dirty schedulers are available).
 
@@ -69,8 +73,12 @@ defmodule Telemetry.Poller do
       with the scheduler ID of the queue. Note that number of schedulers is fixed at virtual machine
       boot time, so the number of events emitted on each measurement is constant.
 
-      For dirty CPU run queue, the event name is `[:vm, :run_queues_length, :dirty_cpu]` and the
+      For dirty CPU run queue, the event name is `[:vm, :run_queue_lengths, :dirty_cpu]` and the
       event metadata is empty.
+
+      The length of all queues is not gathered atomically, so the event values do not represent
+      a consistent snapshot of the run queues' state. However, the value is accurate enough to help
+      to indentify issues in a running system.
 
       If you do not need the individual run queue lengths, it is more efficient to use
       `:total_run_queue_lengths` measurement.
