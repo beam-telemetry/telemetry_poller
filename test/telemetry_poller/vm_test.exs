@@ -101,6 +101,7 @@ defmodule Telemetry.Poller.VMTest do
     Telemetry.detach(handler_id)
   end
 
+  @tag :dirty_schedulers
   test "run_queue_lengths/0 dispatches a [:vm, :run_queue_lengths, :dirty_cpu] event with empty metadata" do
     empty_metadata = %{}
 
