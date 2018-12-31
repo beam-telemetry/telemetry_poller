@@ -312,6 +312,8 @@ defmodule Telemetry.Poller do
           | :binary_memory
           | :code_memory
           | :ets_memory
+          | :total_run_queue_lengths
+          | :run_queue_lengths
 
   ## API
 
