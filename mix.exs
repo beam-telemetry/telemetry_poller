@@ -8,7 +8,7 @@ defmodule Telemetry.Poller.MixProject do
       app: :telemetry_poller,
       name: "Telemetry.Poller",
       version: @version,
-      elixir: "~> 1.4",
+      elixir: "~> 1.5",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
       preferred_cli_env: preferred_cli_env(),

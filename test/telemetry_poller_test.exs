@@ -87,7 +87,7 @@ defmodule Telemetry.PollerTest do
   test "poller can be started under supervisor using the old-style child spec" do
     measurement = {Telemetry.Poller.VM, :memory, []}
     child_id = MyPoller
-    children = [Supervisor.Spec.worker(Poller, [[measurements: [measurement]]], id: child_id)]
+    children = [Supervisor.child_spec({Poller, measurements: [measurement]}, id: child_id)]
 
     {:ok, sup} = Supervisor.start_link(children, strategy: :one_for_one)
 

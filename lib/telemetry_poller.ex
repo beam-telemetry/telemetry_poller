@@ -116,12 +116,7 @@ defmodule Telemetry.Poller do
   You can start your own Poller using the `start_link/1` function. Poller can be alaso started as a
   part of your supervision tree, using both the old-style and the new-style child specifications:
 
-      # pre Elixir 1.5.0
-      children = [Supervisor.Spec.worker(Telemetry.Poller, [[period: 5000]])]
-
-      # post Elixir 1.5.0
       children = [{Telemetry.Poller, [period: 5000]}]
-
       Supervisor.start_link(children, [strategy: :one_for_one])
 
   You can start as many Pollers as you wish, but generally you shouldn't need to do it, unless
