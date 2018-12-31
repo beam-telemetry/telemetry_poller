@@ -20,7 +20,7 @@ defmodule Telemetry.Poller.TestHelpers do
         unquote(timeout)
       )
 
-      Telemetry.detach(handler_id)
+      :telemetry.detach(handler_id)
     end
   end
 
@@ -48,7 +48,7 @@ defmodule Telemetry.Poller.TestHelpers do
   """
   def attach_to(event) do
     handler_id = make_ref()
-    Telemetry.attach(handler_id, event, TestHandler, :handle, %{caller: self()})
+    :telemetry.attach(handler_id, event, &TestHandler.handle/4, %{caller: self()})
     handler_id
   end
 

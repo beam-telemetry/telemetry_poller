@@ -28,7 +28,7 @@ defmodule Telemetry.Poller do
       ]
 
   For custom pollers, the measurements are given as MFAs. Those MFAs should
-  collect a value (if possible) and dispatch an event using `Telemetry.execute/3`
+  collect a value (if possible) and dispatch an event using `:telemetry.execute/3`
   function. If the invokation of the MFA fails, the measurement is removed
   from the Poller.
 
@@ -156,7 +156,7 @@ defmodule Telemetry.Poller do
         def message_queue_length(name) do
           with pid when is_pid(pid) <- Process.whereis(name),
                {:message_queue_len, length} <- Process.info(pid, :message_queue_len) do
-            Telemetry.execute([:example_app, :message_queue_length], length, %{name: name})
+            :telemetry.execute([:example_app, :message_queue_length], length, %{name: name})
           end
         end
       end
@@ -179,7 +179,7 @@ defmodule Telemetry.Poller do
       ...>     IO.puts("Process #{inspect(name)} message queue length: #{length}")
       ...>   end
       ...> end
-      iex> Telemetry.attach(:handler, [:example_app, :message_queue_length], Handler, :handle)
+      iex> :telemetry.attach(:handler, [:example_app, :message_queue_length], &Handler.handle/4, nil)
       :ok
 
   Now let's start assigning work to the worker:
@@ -231,7 +231,7 @@ defmodule Telemetry.Poller do
 
       defmodule ExampleApp.Measurements do
         def dispatch_session_count() do
-          Telemetry.execute([:example_app, :session_count], ExampleApp.session_count())
+          :telemetry.execute([:example_app, :session_count], ExampleApp.session_count())
         end
       end
 
@@ -248,8 +248,8 @@ defmodule Telemetry.Poller do
         def dispatch_session_count() do
           regulars = ExampleApp.regular_users_session_count()
           admins = ExampleApp.admin_users_session_count()
-          Telemetry.execute([:example_app, :session_count], regulars, %{role: :regular})
-          Telemetry.execute([:example_app, :session_count], admins, %{role: :admin})
+          :telemetry.execute([:example_app, :session_count], regulars, %{role: :regular})
+          :telemetry.execute([:example_app, :session_count], admins, %{role: :admin})
         end
       end
 

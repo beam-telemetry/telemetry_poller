@@ -98,7 +98,7 @@ defmodule Telemetry.Poller.VMTest do
       assert_dispatched ^event, _, ^metadata
     end
 
-    Telemetry.detach(handler_id)
+    :telemetry.detach(handler_id)
   end
 
   @tag :dirty_schedulers
