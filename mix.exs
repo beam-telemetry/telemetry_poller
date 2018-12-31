@@ -39,7 +39,7 @@ defmodule Telemetry.Poller.MixProject do
 
   defp deps do
     [
-      {:telemetry, "~> 0.3.0"},
+      {:telemetry, "~> 0.3"},
       {:ex_doc, "~> 0.19", only: :docs},
       {:dialyxir, "~> 1.0.0-rc.1", only: :test, runtime: false}
     ]
