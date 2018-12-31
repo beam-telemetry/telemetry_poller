@@ -3,47 +3,47 @@ defmodule Telemetry.Poller.VM do
 
   @spec total_memory() :: :ok
   def total_memory() do
-    Telemetry.execute([:vm, :memory, :total], :erlang.memory(:total))
+    :telemetry.execute([:vm, :memory, :total], :erlang.memory(:total))
   end
 
   @spec processes_memory() :: :ok
   def processes_memory() do
-    Telemetry.execute([:vm, :memory, :processes], :erlang.memory(:processes))
+    :telemetry.execute([:vm, :memory, :processes], :erlang.memory(:processes))
   end
 
   @spec processes_used_memory() :: :ok
   def processes_used_memory() do
-    Telemetry.execute([:vm, :memory, :processes_used], :erlang.memory(:processes_used))
+    :telemetry.execute([:vm, :memory, :processes_used], :erlang.memory(:processes_used))
   end
 
   @spec system_memory() :: :ok
   def system_memory() do
-    Telemetry.execute([:vm, :memory, :system], :erlang.memory(:system))
+    :telemetry.execute([:vm, :memory, :system], :erlang.memory(:system))
   end
 
   @spec atom_memory() :: :ok
   def atom_memory() do
-    Telemetry.execute([:vm, :memory, :atom], :erlang.memory(:atom))
+    :telemetry.execute([:vm, :memory, :atom], :erlang.memory(:atom))
   end
 
   @spec atom_used_memory() :: :ok
   def atom_used_memory() do
-    Telemetry.execute([:vm, :memory, :atom_used], :erlang.memory(:atom_used))
+    :telemetry.execute([:vm, :memory, :atom_used], :erlang.memory(:atom_used))
   end
 
   @spec binary_memory() :: :ok
   def binary_memory() do
-    Telemetry.execute([:vm, :memory, :binary], :erlang.memory(:binary))
+    :telemetry.execute([:vm, :memory, :binary], :erlang.memory(:binary))
   end
 
   @spec code_memory() :: :ok
   def code_memory() do
-    Telemetry.execute([:vm, :memory, :code], :erlang.memory(:code))
+    :telemetry.execute([:vm, :memory, :code], :erlang.memory(:code))
   end
 
   @spec ets_memory() :: :ok
   def ets_memory() do
-    Telemetry.execute([:vm, :memory, :ets], :erlang.memory(:ets))
+    :telemetry.execute([:vm, :memory, :ets], :erlang.memory(:ets))
   end
 
   @spec total_run_queue_lengths() :: :ok
@@ -57,7 +57,7 @@ defmodule Telemetry.Poller.VM do
         :erlang.statistics(:total_run_queue_lengths)
       end
 
-    Telemetry.execute(
+    :telemetry.execute(
       [:vm, :run_queue_lengths, :total],
       total,
       %{}
@@ -73,14 +73,14 @@ defmodule Telemetry.Poller.VM do
       Enum.split(individual_lengths, normal_schedulers_count)
 
     for {run_queue_length, scheduler_id} <- Enum.with_index(normal_run_queue_lengths, 1) do
-      Telemetry.execute([:vm, :run_queue_lengths, :normal], run_queue_length, %{
+      :telemetry.execute([:vm, :run_queue_lengths, :normal], run_queue_length, %{
         scheduler_id: scheduler_id
       })
     end
 
     case dirty_run_queue_lengths do
       [dirty_cpu_run_queue_length] ->
-        Telemetry.execute([:vm, :run_queue_lengths, :dirty_cpu], dirty_cpu_run_queue_length)
+        :telemetry.execute([:vm, :run_queue_lengths, :dirty_cpu], dirty_cpu_run_queue_length)
 
       _ ->
         :ok

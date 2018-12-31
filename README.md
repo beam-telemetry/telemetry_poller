@@ -16,7 +16,7 @@ measurements as Telemetry events:
 # define custom function dispatching event with value you're interested in
 defmodule ExampleApp.Measurements do
   def dispatch_session_count() do
-    Telemetry.execute([:example_app, :session_count], ExampleApp.session_count())
+    :telemetry.execute([:example_app, :session_count], ExampleApp.session_count())
   end
 end
 

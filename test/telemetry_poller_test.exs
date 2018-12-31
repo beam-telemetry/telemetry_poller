@@ -7,7 +7,7 @@ defmodule Telemetry.PollerTest do
 
   defmodule TestMeasure do
     def single_sample(event, value, metadata \\ %{}),
-      do: Telemetry.execute(event, value, metadata)
+      do: :telemetry.execute(event, value, metadata)
 
     def raise(), do: raise("I'm raising because I can!")
   end
