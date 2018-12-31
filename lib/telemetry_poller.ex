@@ -1,25 +1,52 @@
 defmodule Telemetry.Poller do
-  @moduledoc """
+  @moduledoc ~S"""
   A time-based poller to periodically dispatch Telemetry events.
 
-  Measurements are MFAs called periodically by the Poller process. These MFAs should collect
-  a value (if possible) and dispatch an event using `Telemetry.execute/3` function. If the
-  invokation of the MFA fails, the measurement is removed from the Poller.
+  By default a single poller is started under `Telemetry.Poller` application.
+  It is started with name `Telemetry.Poller.Default` and a default set of VM
+  measurements. It polls all default VM measurements, which is equivalent to:
 
-  See the "Example - (...)" sections for more concrete examples.
+      config :telemetry_poller, :default,
+        vm_measurements: :default # this is the default
+
+  But you may specify all VM measurements you want:
+
+      config :telemetry_poller, :default,
+        vm_measurements: [:total_memory, :binary_memory, :total_run_queue_lengths]
+
+  Measurements are MFAs called periodically by the poller process.
+  You can disable the default poller by setting it to `false`:
+
+      config :telemetry_poller, :default, false
+
+  Telemetry poller also allows you perform custom measurements by spawning
+  your own poller process:
+
+      children = [
+        {Telemetry.Poller,
+         measurements: [{MyApp.Example, :measure, []}]}
+      ]
+
+  For custom pollers, the measurements are given as MFAs. Those MFAs should
+  collect a value (if possible) and dispatch an event using `Telemetry.execute/3`
+  function. If the invokation of the MFA fails, the measurement is removed
+  from the Poller.
+
+  For all options, see `start_link/1`. The options listed there can be given
+  to the default poller as well as to custom pollers.
+
+  Over the next sections, we will describe all built-in VM measurements and
+  explore some concrete examples.
 
   ## VM measurements
 
-  Besides regular MFA measurements, Poller also accepts a list of atoms describing measurements
-  related to Erlang virtual machine. VM measurements need to be provided via `:vm_measurements`
-  option. Below you can find a list of available measurements.
+  VM measurements need to be provided via `:vm_measurements` option. Below you
+  can find a list of available measurements per category.
 
-  ### Available measurements
+  ### Memory
 
-  #### Memory
-
-  See documentation for `:erlang.memory/0` function for more information about each type of memory
-  measured.
+  See documentation for `:erlang.memory/0` function for more information about
+  each type of memory measured.
 
   * `:total_memory` - dispatches an event with total amount of currently allocated memory, in bytes.
   Event name is `[:vm, :memory, :total]` and event metadata is empty;
@@ -42,7 +69,7 @@ defmodule Telemetry.Poller do
   * `:code_memory` - dispatches an event with amount of memory currently allocated for code. Event
     name is `[:vm, :memory, :code]` and event metadata is empty;
 
-  #### Run queue lengths
+  ### Run queue lengths
 
   On startup, the Erlang VM starts many schedulers to do both IO and CPU work. If a process
   needs to do some work or wait on IO, it is allocated to the appropriate scheduler. The run
@@ -87,47 +114,17 @@ defmodule Telemetry.Poller do
 
   ### Default measurements
 
-  When `:default` is provided as the value of `:vm_measurement` options, Poller uses `:total_memory`,
-  `:processes_memory`, `:processes_used_memory`, `:binary_memory`, `:ets_memory`
-  and `:total_run_queue_lengths` VM measurements.
-
-  ### Example
-
-      alias Telemetry.Poller
-      Poller.start_link(
-        vm_measurements: [:total_memory, :processes_memory, :atom_memory]
-      )
-
-  ## Starting and stopping
-
-  By default a single Poller is started under `Telemetry.Poller` application. It is started with
-  name `Telemetry.Poller.Default` and default set of VM measurements. You can configure the default
-  Poller using application environment:
-
-      config :telemetry_poller, :default,
-        measurements: [{ExampleApp.Measurements, :measurement, []}]
-
-  Provided options will be merged with the defaults.
-
-  The default Poller can be disabled by setting `:default` key to `false`:
-
-      config :telemetry_poller, default: false
-
-  You can start your own Poller using the `start_link/1` function. Poller can be alaso started as a
-  part of your supervision tree, using both the old-style and the new-style child specifications:
-
-      children = [{Telemetry.Poller, [period: 5000]}]
-      Supervisor.start_link(children, [strategy: :one_for_one])
-
-  You can start as many Pollers as you wish, but generally you shouldn't need to do it, unless
-  you know that it's not keeping up with collecting all specified measurements.
+  When `:default` is provided as the value of `:vm_measurement` options, Poller uses
+  `:total_memory`, `:processes_memory`, `:processes_used_memory`, `:binary_memory`,
+  `:ets_memory` and `:total_run_queue_lengths` VM measurements.
 
   ## Example - measuring message queue length of the process
 
-  Measuring process' message queue length is a good way to find out if and when the process becomes
-  the bottleneck. If the length of the queue is growing, it means that the process is not keeping
-  up with the work it's been assigned and other processes asking it to do the work will get
-  timeouts. Let's try to simulate that situation using the following GenServer:
+  Measuring process' message queue length is a good way to find out if and when the
+  process becomes the bottleneck. If the length of the queue is growing, it means that
+  the process is not keeping up with the work it's been assigned and other processes
+  asking it to do the work will get timeouts. Let's try to simulate that situation
+  using the following GenServer:
 
       defmodule Worker do
         use GenServer
@@ -150,8 +147,8 @@ defmodule Telemetry.Poller do
         end
       end
 
-  When assigned with work (`handle_call/3`), the worker will sleep for 1 second to imitate long
-  running task.
+  When assigned with work (`handle_call/3`), the worker will sleep for 1 second to
+  imitate long running task.
 
   Now we need a measurement dispatching the message queue length of the worker:
 
@@ -179,7 +176,7 @@ defmodule Telemetry.Poller do
 
       iex> defmodule Handler do
       ...>   def handle([:example_app, :message_queue_length], length, %{name: name}, _) do
-      ...>     IO.puts("Process #\{inspect(name)} message queue length: #\{length}")
+      ...>     IO.puts("Process #{inspect(name)} message queue length: #{length}")
       ...>   end
       ...> end
       iex> Telemetry.attach(:handler, [:example_app, :message_queue_length], Handler, :handle)
@@ -319,31 +316,6 @@ defmodule Telemetry.Poller do
   ## API
 
   @doc """
-  Returns a child specifiction for Poller.
-
-  It accepts `t:options/0` as an argument, meaning that it's valid to start it under the supervisor
-  as follows:
-
-      alias Telemetry.Poller
-      # use default options
-      Supervisor.start_link([Poller], supervisor_opts) # use default options
-      # customize options
-      Supervisor.start_link([{Poller, period: 10_000}], supervisor_opts)
-      # modify the child spec
-      Supervisor.start_link(Supervisor.child_spec(Poller, id: MyPoller), supervisor_opts)
-  """
-  # Uncomment when dropping support for 1.4.x releases.
-  # @spec child_spec(term()) :: Supervisor.child_spec()
-  def child_spec(term)
-
-  def child_spec(options) do
-    %{
-      id: __MODULE__,
-      start: {__MODULE__, :start_link, [options]}
-    }
-  end
-
-  @doc """
   Starts a Poller linked to the calling process.
 
   Useful for starting Pollers as a part of a supervision tree.
@@ -359,6 +331,7 @@ defmodule Telemetry.Poller do
     value is #{@default_period} ms;
   * `:name` - the name of the Poller process. See "Name Registragion" section of `GenServer`
     documentation for information about allowed values.
+
   """
   @spec start_link(options()) :: GenServer.on_start()
   def start_link(options \\ []) when is_list(options) do

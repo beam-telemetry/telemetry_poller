@@ -2,9 +2,15 @@
 
 Allows to periodically collect measurements and dispatch them as Telemetry events.
 
-Poller provides a convenient API for specifying functions called periodically to dispatch
-measurements as Telemetry events. It also includes helpers for measuring Erlang virtual machine
-metrics:
+`Telemetry.Poller` ships with a default poller for VM measurements:
+
+```elixir
+config :telemetry_poller, :default,
+  vm_measurements: :default # or a list such as [:total_memory, :binary_memory, ...]
+```
+
+Poller also provides a convenient API for specifying functions called periodically to dispatch
+measurements as Telemetry events:
 
 ```elixir
 # define custom function dispatching event with value you're interested in
@@ -19,8 +25,6 @@ Telemetry.Poller.start_link(
   measurements: [
     {ExampleApp.Measurements, :dispatch_session_count, []}
   ],
-  # include default VM measurements
-  vm_measurements: :default,
   period: 10_000 # configure sampling period
 )
 ```
