@@ -24,8 +24,25 @@ orbs:
           - run: mix local.hex --force
           - run: mix local.rebar --force
           - checkout
+          - restore_cache:
+              keys:
+                - dialyzer-PLT-<<parameters.version>>-{{ checksum "mix.lock" }}
+                - dialyzer-PLT-<<parameters.version>>
+          - restore_cache:
+              keys:
+                - deps-{{ checksum "mix.lock" }}
+                - deps
           - run: mix deps.get
           - run: mix test
+          - run: mix dialyzer
+          - save_cache:
+              key: dialyzer-PLT-<<parameters.version>>-{{ checksum "mix.lock" }}
+              paths:
+              - _build
+          - save_cache:
+              key: deps-{{ checksum "mix.lock" }}
+              paths:
+              - deps
 
 workflows:
   build_and_test:
