@@ -1,13 +1,41 @@
-version: 2
+version: 2.1
 
-jobs:
-  build_and_test:
-    docker:
-      - image: elixir:1.7-alpine
-    steps:
-      - run: echo "Hello, World!"
+orbs:
+  telemetry_poller:
+    executors:
+      elixir:
+        parameters:
+          version:
+            description: The Elixir Docker image tag to use
+            type: string
+        docker:
+          - image: elixir:<<parameters.version>>
+
+    jobs:
+      build_and_test:
+        parameters:
+          version:
+            description: The Elixir Docker image tag to use
+            type: string
+        executor:
+          name: elixir
+          version: <<parameters.version>>
+        steps:
+          - run: mix local.hex --force
+          - run: mix local.rebar --force
+          - checkout
+          - run: mix deps.get
+          - run: mix test
 
 workflows:
-  version: 2
-  jobs:
-    - build_and_test
+  build_and_test:
+    jobs:
+      - telemetry_poller/build_and_test:
+          name: "1.7"
+          version: "1.7-alpine"
+      - telemetry_poller/build_and_test:
+          name: "1.6"
+          version: "1.6-alpine"
+      - telemetry_poller/build_and_test:
+          name: "1.5"
+          version: "1.5-alpine"
