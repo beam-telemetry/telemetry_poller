@@ -1,0 +1,13 @@
+version: 2
+
+jobs:
+  build_and_test:
+    docker:
+      - image: elixir:1.7-alpine
+    steps:
+      - run: echo "Hello, World!"
+
+workflows:
+  version: 2
+  jobs:
+    - build_and_test
