@@ -301,7 +301,7 @@ defmodule Telemetry.Poller do
           | {:measurements, [measurement()]}
           | {:vm_measurements, :default | [vm_measurement()]}
   @type period :: pos_integer()
-  @type measurement() :: mfa()
+  @type measurement() :: {module(), function :: atom(), args :: list()}
   @type vm_measurement() ::
           :total_memory
           | :processes_memory
@@ -470,8 +470,8 @@ defmodule Telemetry.Poller do
   end
 
   @spec parse_vm_measurement!(term()) :: measurement() | no_return()
-  defp parse_vm_measurement!(memory) when memory in @vm_measurements do
-    vm_measurement(memory)
+  defp parse_vm_measurement!(measurement) when measurement in @vm_measurements do
+    vm_measurement(measurement)
   end
 
   defp parse_vm_measurement!(other) do
