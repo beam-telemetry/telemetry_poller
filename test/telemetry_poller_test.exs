@@ -84,19 +84,7 @@ defmodule Telemetry.PollerTest do
     assert eventually(fn -> [] == Poller.list_measurements(poller) end)
   end
 
-  test "poller can be started under supervisor using the old-style child spec" do
-    measurement = {Telemetry.Poller.VM, :memory, []}
-    child_id = MyPoller
-    children = [Supervisor.child_spec({Poller, measurements: [measurement]}, id: child_id)]
-
-    {:ok, sup} = Supervisor.start_link(children, strategy: :one_for_one)
-
-    assert [{^child_id, poller, :worker, [Poller]}] = Supervisor.which_children(sup)
-    assert measurement in Poller.list_measurements(poller)
-  end
-
-  @tag :elixir_1_5_child_specs
-  test "poller can be started under supervisor using the new-style child spec" do
+  test "poller can be started under supervisor" do
     measurement = {Telemetry.Poller.VM, :memory, []}
     child_id = MyPoller
     children = [Supervisor.child_spec({Poller, measurements: [measurement]}, id: child_id)]
