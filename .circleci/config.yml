@@ -5,29 +5,36 @@ orbs:
     executors:
       elixir:
         parameters:
-          version:
-            description: The Elixir Docker image tag to use
+          elixir:
+            description: Elixir version to used by the job
+            type: string
+          otp:
+            description: OTP release to used by the job
             type: string
         docker:
-          - image: elixir:<<parameters.version>>
+          - image: arkgil/alpine-elixir:<<parameters.elixir>>-otp-<<parameters.otp>>
 
     jobs:
       build_and_test:
         parameters:
-          version:
-            description: The Elixir Docker image tag to use
+          elixir:
+            description: Elixir version to used by the job
+            type: string
+          otp:
+            description: OTP release to used by the job
             type: string
         executor:
           name: elixir
-          version: <<parameters.version>>
+          elixir: <<parameters.elixir>>
+          otp: <<parameters.otp>>
         steps:
           - run: mix local.hex --force
           - run: mix local.rebar --force
           - checkout
           - restore_cache:
               keys:
-                - dialyzer-PLT-<<parameters.version>>-{{ checksum "mix.lock" }}
-                - dialyzer-PLT-<<parameters.version>>
+                - dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
+                - dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>
           - restore_cache:
               keys:
                 - deps-{{ checksum "mix.lock" }}
@@ -36,7 +43,7 @@ orbs:
           - run: mix test
           - run: mix dialyzer
           - save_cache:
-              key: dialyzer-PLT-<<parameters.version>>-{{ checksum "mix.lock" }}
+              key: dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
               paths:
               - _build
           - save_cache:
@@ -48,11 +55,18 @@ workflows:
   build_and_test:
     jobs:
       - telemetry_poller/build_and_test:
-          name: "1.7"
-          version: "1.7-alpine"
+          name: "1.7-otp-21"
+          elixir: "1.7.4"
+          otp: "21"
       - telemetry_poller/build_and_test:
-          name: "1.6"
-          version: "1.6-alpine"
+          name: "1.7-otp-19"
+          elixir: "1.7.4"
+          otp: "19"
       - telemetry_poller/build_and_test:
-          name: "1.5"
-          version: "1.5-alpine"
+          name: "1.5-otp-20"
+          elixir: "1.5.3"
+          otp: "20"
+      - telemetry_poller/build_and_test:
+          name: "1.5-otp-18"
+          elixir: "1.5.3"
+          otp: "20"
