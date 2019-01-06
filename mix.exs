@@ -16,7 +16,8 @@ defmodule Telemetry.Poller.MixProject do
       dialyzer: dialyzer(),
       docs: docs(),
       description: description(),
-      package: package()
+      package: package(),
+      test_coverage: [tool: ExCoveralls]
     ]
   end
 
@@ -33,7 +34,8 @@ defmodule Telemetry.Poller.MixProject do
   defp preferred_cli_env() do
     [
       docs: :docs,
-      dialyzer: :test
+      dialyzer: :test,
+      "coveralls.json": :test
     ]
   end
 
@@ -41,7 +43,8 @@ defmodule Telemetry.Poller.MixProject do
     [
       {:telemetry, "~> 0.3"},
       {:ex_doc, "~> 0.19", only: :docs},
-      {:dialyxir, "~> 1.0.0-rc.1", only: :test, runtime: false}
+      {:dialyxir, "~> 1.0.0-rc.1", only: :test, runtime: false},
+      {:excoveralls, "~> 0.10.0", only: :test, runtime: false}
     ]
   end
 
