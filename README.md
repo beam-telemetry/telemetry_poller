@@ -9,7 +9,7 @@ Allows to periodically collect measurements and dispatch them as Telemetry event
 
 ```elixir
 config :telemetry_poller, :default,
-  vm_measurements: :default # or a list such as [:total_memory, :binary_memory, ...]
+  vm_measurements: :default # or a list such as [:memory, ...]
 ```
 
 Poller also provides a convenient API for specifying functions called periodically to dispatch

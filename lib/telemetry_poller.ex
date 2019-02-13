@@ -12,7 +12,7 @@ defmodule Telemetry.Poller do
   But you may specify all VM measurements you want:
 
       config :telemetry_poller, :default,
-        vm_measurements: [:total_memory, :binary_memory, :total_run_queue_lengths]
+        vm_measurements: [:memory, :run_queue_lengths]
 
   Measurements are MFAs called periodically by the poller process.
   You can disable the default poller by setting it to `false`:
@@ -45,29 +45,9 @@ defmodule Telemetry.Poller do
 
   ### Memory
 
-  See documentation for `:erlang.memory/0` function for more information about
-  each type of memory measured.
-
-  * `:total_memory` - dispatches an event with total amount of currently allocated memory, in bytes.
-  Event name is `[:vm, :memory, :total]` and event metadata is empty;
-  * `:processes_memory` - dispatches an event with amount of memory cyrrently allocated for
-    processes, in bytes. Event name is `[:vm, :memory, :processes]` and event metadata is empty;
-  * `:processes_used_memory` - dispatches an event with amount of memory currently used for
-    processes, in bytes. Event name is `[:vm, :memory, :processes_used]` and event metadata is empty.
-    Memory measured is a fraction of value collected by `:processes_memory` measurement;
-  * `:binary_memory` - dispatches an event with amount of memory currently allocated for binaries.
-    Event name is `[:vm, :memory, :binary]` and event metadata is empty;
-  * `:ets_memory` - dispatches an event with amount of memory currently allocated for ETS tables.
-    Event name is `[:vm, :memory, :ets]` and event metadata is empty;
-  * `:system_memory` - dispatches an event with amount of currently allocated memory not directly
-    related to any process running in the VM, in bytes. Event name is `[:vm, :memory, :system]` and
-    event metadata is empty;
-  * `:atom_memory` - dispatches an event with amount of memory currently allocated for atoms. Event
-    name is `[:vm, :memory, :atom]` and event metadata is empty;
-  * `:atom_used_memory` - dispatches an event with amount of memory currently used for atoms. Event
-    name is `[:vm, :memory, :atom_used]` and event metadata is empty;
-  * `:code_memory` - dispatches an event with amount of memory currently allocated for code. Event
-    name is `[:vm, :memory, :code]` and event metadata is empty;
+  There is only one measurement related to memory - `:memory`. The emitted event includes all the
+  key-value pairs returned by `:erlang.memory/0` function, e.g. `:total` for total memory,
+  `:processes_used` for memory used by all processes etc.
 
   ### Run queue lengths
 
@@ -114,9 +94,8 @@ defmodule Telemetry.Poller do
 
   ### Default measurements
 
-  When `:default` is provided as the value of `:vm_measurement` options, Poller uses
-  `:total_memory`, `:processes_memory`, `:processes_used_memory`, `:binary_memory`,
-  `:ets_memory` and `:total_run_queue_lengths` VM measurements.
+  When `:default` is provided as the value of `:vm_measurement` options, Poller uses `:memory` and
+  `:total_run_queue_lengths` VM measurements.
 
   ## Example - measuring message queue length of the process
 
@@ -272,23 +251,11 @@ defmodule Telemetry.Poller do
 
   @default_period 10_000
   @default_vm_measurements [
-    :total_memory,
-    :processes_memory,
-    :processes_used_memory,
-    :binary_memory,
-    :ets_memory,
+    :memory,
     :total_run_queue_lengths
   ]
   @vm_measurements [
-    :total_memory,
-    :processes_memory,
-    :processes_used_memory,
-    :system_memory,
-    :atom_memory,
-    :atom_used_memory,
-    :binary_memory,
-    :code_memory,
-    :ets_memory,
+    :memory,
     :total_run_queue_lengths,
     :run_queue_lengths
   ]
@@ -303,15 +270,7 @@ defmodule Telemetry.Poller do
   @type period :: pos_integer()
   @type measurement() :: {module(), function :: atom(), args :: list()}
   @type vm_measurement() ::
-          :total_memory
-          | :processes_memory
-          | :processes_used_memory
-          | :system_memory
-          | :atom_memory
-          | :atom_used_memory
-          | :binary_memory
-          | :code_memory
-          | :ets_memory
+          :memory
           | :total_run_queue_lengths
           | :run_queue_lengths
 
