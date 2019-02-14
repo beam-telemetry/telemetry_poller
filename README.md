@@ -32,7 +32,7 @@ Telemetry.Poller.start_link(
 )
 ```
 
-See [documentation](https://hexdocs.pm/telemetry_poller/0.2.0) for more concrete examples and usage
+See [documentation](https://hexdocs.pm/telemetry_poller/0.3.0) for more concrete examples and usage
 instructions.
 
 ## Copyright and License

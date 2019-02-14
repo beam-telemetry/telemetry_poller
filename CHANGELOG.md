@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [0.3.0](https://github.com/beam-telemetry/telemetry_poller/tree/v0.3.0)
 
 This release marks the upgrade to Telemetry 0.4.0. This means that Poller measurements can emit a map
 of values now instead of a single one, making it less "noisy" when it comes to number of emitted events.
