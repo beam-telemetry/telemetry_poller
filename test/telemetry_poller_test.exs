@@ -7,7 +7,7 @@ defmodule Telemetry.PollerTest do
 
   defmodule TestMeasure do
     def single_sample(event, value, metadata \\ %{}),
-      do: :telemetry.execute(event, value, metadata)
+      do: :telemetry.execute(event, %{value: value}, metadata)
 
     def raise(), do: raise("I'm raising because I can!")
   end
@@ -33,8 +33,8 @@ defmodule Telemetry.PollerTest do
     ## *after* the period has passed, and not that at least two events are dispatched before one
     ## period passes.
     Process.sleep(period)
-    assert_dispatched ^event, ^value, _, 0
-    assert_dispatched ^event, ^value, _, 100
+    assert_dispatched ^event, %{value: ^value}, _, 0
+    assert_dispatched ^event, %{value: ^value}, _, 100
   end
 
   @tag :capture_log
@@ -57,7 +57,7 @@ defmodule Telemetry.PollerTest do
     metadata = %{some: "metadata"}
     measurement = {TestMeasure, :single_sample, [event, value, metadata]}
 
-    assert_dispatch event, ^value, ^metadata, fn ->
+    assert_dispatch event, %{value: ^value}, ^metadata, fn ->
       {:ok, _} = Poller.start_link(measurements: [measurement])
     end
   end
@@ -97,11 +97,7 @@ defmodule Telemetry.PollerTest do
 
   test "poller can be given :default VM measurements" do
     measurement_funs = [
-      :total_memory,
-      :processes_memory,
-      :processes_used_memory,
-      :ets_memory,
-      :binary_memory,
+      :memory,
       :total_run_queue_lengths
     ]
 
@@ -117,17 +113,8 @@ defmodule Telemetry.PollerTest do
 
   test "poller can be given a list of VM measurements" do
     vm_measurements = [
-      :total_memory,
-      :processes_memory,
-      :processes_used_memory,
-      :system_memory,
-      :atom_memory,
-      :atom_used_memory,
-      :binary_memory,
-      :code_memory,
-      :ets_memory,
-      :total_run_queue_lengths,
-      :run_queue_lengths
+      :memory,
+      :total_run_queue_lengths
     ]
 
     {:ok, poller} = Poller.start_link(vm_measurements: vm_measurements)
@@ -143,7 +130,7 @@ defmodule Telemetry.PollerTest do
   end
 
   test "poller registers unique VM measurements" do
-    {:ok, poller} = Poller.start_link(vm_measurements: [:total_memory, :total_memory])
+    {:ok, poller} = Poller.start_link(vm_measurements: [:memory, :memory])
 
     assert 1 == length(Poller.list_measurements(poller))
   end

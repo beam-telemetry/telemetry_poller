@@ -12,7 +12,7 @@ defmodule Telemetry.Poller do
   But you may specify all VM measurements you want:
 
       config :telemetry_poller, :default,
-        vm_measurements: [:total_memory, :binary_memory, :total_run_queue_lengths]
+        vm_measurements: [:memory] # measure only the memory
 
   Measurements are MFAs called periodically by the poller process.
   You can disable the default poller by setting it to `false`:
@@ -45,29 +45,9 @@ defmodule Telemetry.Poller do
 
   ### Memory
 
-  See documentation for `:erlang.memory/0` function for more information about
-  each type of memory measured.
-
-  * `:total_memory` - dispatches an event with total amount of currently allocated memory, in bytes.
-  Event name is `[:vm, :memory, :total]` and event metadata is empty;
-  * `:processes_memory` - dispatches an event with amount of memory cyrrently allocated for
-    processes, in bytes. Event name is `[:vm, :memory, :processes]` and event metadata is empty;
-  * `:processes_used_memory` - dispatches an event with amount of memory currently used for
-    processes, in bytes. Event name is `[:vm, :memory, :processes_used]` and event metadata is empty.
-    Memory measured is a fraction of value collected by `:processes_memory` measurement;
-  * `:binary_memory` - dispatches an event with amount of memory currently allocated for binaries.
-    Event name is `[:vm, :memory, :binary]` and event metadata is empty;
-  * `:ets_memory` - dispatches an event with amount of memory currently allocated for ETS tables.
-    Event name is `[:vm, :memory, :ets]` and event metadata is empty;
-  * `:system_memory` - dispatches an event with amount of currently allocated memory not directly
-    related to any process running in the VM, in bytes. Event name is `[:vm, :memory, :system]` and
-    event metadata is empty;
-  * `:atom_memory` - dispatches an event with amount of memory currently allocated for atoms. Event
-    name is `[:vm, :memory, :atom]` and event metadata is empty;
-  * `:atom_used_memory` - dispatches an event with amount of memory currently used for atoms. Event
-    name is `[:vm, :memory, :atom_used]` and event metadata is empty;
-  * `:code_memory` - dispatches an event with amount of memory currently allocated for code. Event
-    name is `[:vm, :memory, :code]` and event metadata is empty;
+  There is only one measurement related to memory - `:memory`. The emitted event includes all the
+  key-value pairs returned by `:erlang.memory/0` function, e.g. `:total` for total memory,
+  `:processes_used` for memory used by all processes etc.
 
   ### Run queue lengths
 
@@ -83,40 +63,26 @@ defmodule Telemetry.Poller do
 
   The following VM measurements related to run queue lengths are available:
 
-  * `:total_run_queue_lengths` - dispatches an event with a sum of normal schedulers' run queue lengths
-    and a dirty CPU run queue length (if dirty schedulers are available). Event name is
-    `[:vm, run_queue_lengths, :total]` and event metadata is empty.
+  * `:total_run_queue_lengths` - dispatches an event with a sum of schedulers' run queue lengths. The
+    event name is `[:vm, :total_run_queue_lengths]`, event metadata is empty and it includes three
+    measurements:
+    * `:total` - a sum of all run queue lengths;
+    * `:cpu` - a sum of CPU schedulers' run queue lengths, including dirty CPU run queue length
+      on Erlang >= 20.0;
+    * `:io` - length of dirty IO run queue. It's always 0 if running on Erlang < 20.0.
+
 
     Note that the method of making this measurement varies between different Erlang versions: for
     Erlang 18 and 19, the implementation is less efficient than for version 20 and up.
 
     The length of all queues is not gathered atomically, so the event value does not represent
     a consistent snapshot of the run queues' state. However, the value is accurate enough to help
-    to indentify issues in a running system.
-
-  * `:run_queue_lengths` - dispatches events with individual normal run queue lengths and a dirty
-    CPU run queue length (if dirty schedulers are available).
-
-    For normal run queues, event name is `[:vm, run_queue_lengths, :normal]` and event metadata
-    includes a single key, `:scheduler_id`, with the scheduler ID of the queue. Note that number
-    of schedulers is fixed at virtual machine boot time, so the number of events emitted on each
-    measurement is constant.
-
-    For dirty CPU run queue, the event name is `[:vm, :run_queue_lengths, :dirty_cpu]` and the
-    event metadata is empty.
-
-    The length of all queues is not gathered atomically, so the event values do not represent
-    a consistent snapshot of the run queues' state. However, the value is accurate enough to help
-    to indentify issues in a running system.
-
-    If you do not need the individual run queue lengths, it is more efficient to use
-    `:total_run_queue_lengths` measurement.
+    to identify issues in a running system.
 
   ### Default measurements
 
-  When `:default` is provided as the value of `:vm_measurement` options, Poller uses
-  `:total_memory`, `:processes_memory`, `:processes_used_memory`, `:binary_memory`,
-  `:ets_memory` and `:total_run_queue_lengths` VM measurements.
+  When `:default` is provided as the value of `:vm_measurement` options, Poller uses `:memory` and
+  `:total_run_queue_lengths` VM measurements.
 
   ## Example - measuring message queue length of the process
 
@@ -272,25 +238,12 @@ defmodule Telemetry.Poller do
 
   @default_period 10_000
   @default_vm_measurements [
-    :total_memory,
-    :processes_memory,
-    :processes_used_memory,
-    :binary_memory,
-    :ets_memory,
+    :memory,
     :total_run_queue_lengths
   ]
   @vm_measurements [
-    :total_memory,
-    :processes_memory,
-    :processes_used_memory,
-    :system_memory,
-    :atom_memory,
-    :atom_used_memory,
-    :binary_memory,
-    :code_memory,
-    :ets_memory,
-    :total_run_queue_lengths,
-    :run_queue_lengths
+    :memory,
+    :total_run_queue_lengths
   ]
 
   @type t :: GenServer.server()
@@ -303,17 +256,8 @@ defmodule Telemetry.Poller do
   @type period :: pos_integer()
   @type measurement() :: {module(), function :: atom(), args :: list()}
   @type vm_measurement() ::
-          :total_memory
-          | :processes_memory
-          | :processes_used_memory
-          | :system_memory
-          | :atom_memory
-          | :atom_used_memory
-          | :binary_memory
-          | :code_memory
-          | :ets_memory
+          :memory
           | :total_run_queue_lengths
-          | :run_queue_lengths
 
   ## API
 
