@@ -26,36 +26,16 @@ defmodule Telemetry.Poller.VMTest do
                     end
   end
 
-  test "total_run_queue_lengths/0 dispatches [:vm, :run_queue_lengths, total] event with empty metadata" do
+  test "total_run_queue_lengths/0 dispatches [:vm, :run_queue_lengths] event with total, cpu and io " <>
+         "run queue lengths" do
     empty_metadata = %{}
 
-    assert_dispatch [:vm, :run_queue_lengths, :total], _, ^empty_metadata, fn ->
+    assert_dispatch [:vm, :total_run_queue_lengths], %{
+      total: _,
+      cpu: _,
+      io: _
+    }, ^empty_metadata, fn ->
       VM.total_run_queue_lengths()
-    end
-  end
-
-  test "run_queue_lengths/0 dispatches [:vm, :run_queue_lengths, :normal] event for each normal " <>
-         "run queue" do
-    normal_schedulers_count = :erlang.system_info(:schedulers)
-    event = [:vm, :run_queue_lengths, :normal]
-    handler_id = attach_to(event)
-
-    VM.run_queue_lengths()
-
-    for scheduler_id <- 1..normal_schedulers_count do
-      metadata = %{scheduler_id: scheduler_id}
-      assert_dispatched ^event, %{length: _}, ^metadata
-    end
-
-    :telemetry.detach(handler_id)
-  end
-
-  @tag :dirty_schedulers
-  test "run_queue_lengths/0 dispatches a [:vm, :run_queue_lengths, :dirty_cpu] event with empty metadata" do
-    empty_metadata = %{}
-
-    assert_dispatch [:vm, :run_queue_lengths, :dirty_cpu], %{length: _}, ^empty_metadata, fn ->
-      VM.run_queue_lengths()
     end
   end
 end

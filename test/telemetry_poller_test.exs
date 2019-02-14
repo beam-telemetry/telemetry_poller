@@ -114,8 +114,7 @@ defmodule Telemetry.PollerTest do
   test "poller can be given a list of VM measurements" do
     vm_measurements = [
       :memory,
-      :total_run_queue_lengths,
-      :run_queue_lengths
+      :total_run_queue_lengths
     ]
 
     {:ok, poller} = Poller.start_link(vm_measurements: vm_measurements)
