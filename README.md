@@ -5,15 +5,14 @@
 
 Allows to periodically collect measurements and dispatch them as Telemetry events.
 
-`Telemetry.Poller` ships with a default poller for VM measurements:
+`Telemetry.Poller` by default runs a poller to perform VM measurements:
 
-```elixir
-config :telemetry_poller, :default,
-  vm_measurements: :default # or a list such as [:memory, ...]
-```
+  * `[:vm, :memory]` - contains the total memory, process memory, and all other keys in `:erlang.memory/0`
+  * `[:vm, :total_run_queue_lengths]` - returns the run queue lengths for CPU and IO schedulers, as well as total
 
-Poller also provides a convenient API for specifying functions called periodically to dispatch
-measurements as Telemetry events:
+You can directly subscribe to those events after adding `:telemetry_poller` as a dependency.
+
+Poller also provides a convenient API for running custom pollers. You only need to specify which functions are called periodically to dispatch measurements as Telemetry events:
 
 ```elixir
 # define custom function dispatching event with value you're interested in
@@ -32,7 +31,7 @@ Telemetry.Poller.start_link(
 )
 ```
 
-See [documentation](https://hexdocs.pm/telemetry_poller/0.3.0) for more concrete examples and usage
+See [documentation](https://hexdocs.pm/telemetry_poller/) for more concrete examples and usage
 instructions.
 
 ## Copyright and License

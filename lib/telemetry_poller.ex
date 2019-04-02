@@ -1,7 +1,7 @@
 defmodule Telemetry.Poller do
   @moduledoc ~S"""
   A time-based poller to periodically dispatch Telemetry events.
-  
+
   Poller comes with a built-in poller but also allows you to run
   your own. Let's see how.
 
