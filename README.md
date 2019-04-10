@@ -36,6 +36,9 @@ instructions.
 
 ## Copyright and License
 
-Copyright (c) 2018, Chris McCord and Erlang Solutions.
 
-Telemetry source code is licensed under the [Apache License, Version 2.0](LICENSE).
+Telemetry.Poller is copyright (c) 2018 Chris McCord and Erlang Solutions.
+
+Telemetry.Poller source code is released under Apache License, Version 2.0.
+
+See [LICENSE](LICENSE) and [NOTICE](NOTICE) files for more information.
