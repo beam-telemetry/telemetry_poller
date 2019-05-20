@@ -1,0 +1,16 @@
+{application, telemetry_poller,
+ [{description, ""},
+  {vsn, "git"},
+  {registered, []},
+  {mod, {telemetry_poller_app, []}},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+
+  {maintainers, []},
+  {licenses, ["Apache 2.0"]},
+  {links, [{"Github", "https://github.com/beam-telemetry/telemetry_poller"}]}
+ ]}.
