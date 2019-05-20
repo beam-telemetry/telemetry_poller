@@ -66,9 +66,9 @@ workflows:
   build_and_test:
     jobs:
       - telemetry_poller/build_and_test:
-          name: "1.8-otp-21"
+          name: "1.8-otp-22"
           elixir: "1.8.2"
-          otp: "21"
+          otp: "22"
           codecov_flag: "1_8_otp21"
       - telemetry_poller/build_and_test:
           name: "1.8-otp-20"
