@@ -7,9 +7,9 @@ defmodule Telemetry.Poller do
 
   ## Built-in poller
 
-  By default a single poller is started under the `Telemetry.Poller` application.
-  It is started with name `Telemetry.Poller.Default` and its goal is to perform
-  common VM measurements.
+  A single poller is started under the `Telemetry.Poller` application.
+  It is started with name `Telemetry.Poller.Default` and its goal is
+  to perform common VM measurements.
 
   By default, it polls all default VM measurements, which is equivalent to:
 
@@ -48,21 +48,21 @@ defmodule Telemetry.Poller do
   The run queue length event is emitted as `[:vm, :total_run_queue_lengths]`. The event contains
   no metadata and three measurements:
 
-      * `:total` - a sum of all run queue lengths;
-      * `:cpu` - a sum of CPU schedulers' run queue lengths, including dirty CPU run queue length
-      on Erlang >= 20.0;
-      * `:io` - length of dirty IO run queue. It's always 0 if running on Erlang < 20.0.
+    * `:total` - a sum of all run queue lengths;
+    * `:cpu` - a sum of CPU schedulers' run queue lengths, including dirty CPU run queue length
+    on Erlang >= 20.0;
+    * `:io` - length of dirty IO run queue. It's always 0 if running on Erlang < 20.0.
 
-    Note that the method of making this measurement varies between different Erlang versions: for
-    Erlang 18 and 19, the implementation is less efficient than for version 20 and up.
+  Note that the method of making this measurement varies between different Erlang versions: for
+  Erlang 18 and 19, the implementation is less efficient than for version 20 and up.
 
-    The length of all queues is not gathered atomically, so the event value does not represent
-    a consistent snapshot of the run queues' state. However, the value is accurate enough to help
-    to identify issues in a running system.
+  The length of all queues is not gathered atomically, so the event value does not represent
+  a consistent snapshot of the run queues' state. However, the value is accurate enough to help
+  to identify issues in a running system.
 
   ## Custom pollers
 
-  Telemetry poller also allows you perform custom measurements by spawning
+  Telemetry poller also allows you to perform custom measurements by spawning
   your own poller process:
 
       children = [
@@ -71,9 +71,8 @@ defmodule Telemetry.Poller do
       ]
 
   For custom pollers, the measurements are given as MFAs. Those MFAs should
-  collect a value (if possible) and dispatch an event using `:telemetry.execute/3`
-  function. If the invokation of the MFA fails, the measurement is removed
-  from the Poller.
+  dispatch an event using `:telemetry.execute/3` function. If the invokation
+  of the MFA fails, the measurement is removed from the Poller.
 
   For all options, see `start_link/1`. The options listed there can be given
   to the default poller as well as to custom pollers.

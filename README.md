@@ -8,9 +8,9 @@ Allows to periodically collect measurements and dispatch them as Telemetry event
 `Telemetry.Poller` by default runs a poller to perform VM measurements:
 
   * `[:vm, :memory]` - contains the total memory, process memory, and all other keys in `:erlang.memory/0`
-  * `[:vm, :total_run_queue_lengths]` - returns the run queue lengths for CPU and IO schedulers, as well as total
+  * `[:vm, :total_run_queue_lengths]` - returns the run queue lengths for CPU and IO schedulers. It contains the `:total`, `:cpu` and `:io` measurements
 
-You can directly subscribe to those events after adding `:telemetry_poller` as a dependency.
+You can directly consume those events after adding `:telemetry_poller` as a dependency.
 
 Poller also provides a convenient API for running custom pollers. You only need to specify which functions are called periodically to dispatch measurements as Telemetry events:
 
