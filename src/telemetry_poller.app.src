@@ -1,11 +1,12 @@
 {application, telemetry_poller,
- [{description, ""},
+ [{description, "Periodically collect measurements and dispatch them as Telemetry events."},
   {vsn, "git"},
   {registered, []},
   {mod, {telemetry_poller_app, []}},
   {applications,
    [kernel,
-    stdlib
+    stdlib,
+    telemetry
    ]},
   {env,[]},
   {modules, []},
