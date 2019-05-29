@@ -81,16 +81,16 @@
 %% -behaviour(gen_server).
 %%
 %% start_link(Name) ->
-%%  gen_server:start_link(?MODULE, [], [{name, Name}]).
+%%    gen_server:start_link(?MODULE, [], [{name, Name}]).
 %%
 %% init([]) ->
-%%  {ok, #{}}.
+%%    {ok, #{}}.
 %%
 %% do_work(Name) ->
-%%  gen_server:call(Name, do_work, [{timeout, 5000}]).
+%%    gen_server:call(Name, do_work, [{timeout, 5000}]).
 %%
 %% handle_call(do_work, _, State) ->
-%%  timer:sleep(1000).
+%%    timer:sleep(1000).
 %%
 %% ...
 %% '''
@@ -104,9 +104,9 @@
 %% -module(example_app_measurements).
 %%
 %% message_queue_length(Name) ->
-%%  Pid = erlang:whereis(Name),
-%%  ProcessInfo = erlang:process_info(Pid),
-%%  telemetry:execute([example_app, process_info], ProcessInfo, #{name => Name}).
+%%    Pid = erlang:whereis(Name),
+%%    ProcessInfo = erlang:process_info(Pid),
+%%    telemetry:execute([example_app, process_info], ProcessInfo, #{name => Name}).
 %% '''
 %%
 %% In order to observe the message queue length we can install the event handler printing it out to
@@ -115,7 +115,7 @@
 %% -module(message_length_handler).
 %%
 %% handle([example_app, process_info], #{message_queue_length => Length}, #{name => Name}) ->
-%%  io:format("Process ~p~n message queue length: ~p", [Name, Length]).
+%%    io:format("Process ~p~n message queue length: ~p", [Name, Length]).
 %% '''
 %%
 %% Let's start the worker and poller with the just defined measurement:
@@ -169,7 +169,7 @@
 %% -module(example_app).
 %%
 %% session_count() ->
-%%  % logic for calculating session count.
+%%    % logic for calculating session count.
 %% '''
 %%
 %% To achieve that, we need a measurement dispatching the value we're interested in:
@@ -178,7 +178,7 @@
 %% -module(example_app_measurements).
 %%
 %% dispatch_session_count() ->
-%%  telemetry:execute([example_app, session_count], example_app:session_count()).
+%%    telemetry:execute([example_app, session_count], example_app:session_count()).
 %% '''
 %%
 %% and tell the Poller to invoke it periodically:
@@ -194,14 +194,14 @@
 %% -module(example_app_measurements).
 %%
 %% dispatch_session_count() ->
-%%  Regulars = example_app:regular_users_session_count(),
-%%  Admins = example_app:admin_users_session_count(),
-%%  telemetry:execute([example_app, session_count], #{count => Admins}, #{role => admin}),
-%%  telemetry:execute([example_app, session_count], #{count => Regulars}, #{role => regular}).
+%%    Regulars = example_app:regular_users_session_count(),
+%%    Admins = example_app:admin_users_session_count(),
+%%    telemetry:execute([example_app, session_count], #{count => Admins}, #{role => admin}),
+%%    telemetry:execute([example_app, session_count], #{count => Regulars}, #{role => regular}).
 %% '''
 %%
 %% <blockquote>Note: the other solution would be to dispatch two different events by hooking up
-%% `example_app:regular_users_session_count/0' and `example_app.admin_users_session_count/0'
+%% `example_app:regular_users_session_count/0' and `example_app:admin_users_session_count/0'
 %% functions directly. However, if you add more and more user roles to your app, you'll find
 %% yourself creating a new event for each one of them, which will force you to modify existing
 %% event handlers. If you can break down event value by some feature, like user role in this
