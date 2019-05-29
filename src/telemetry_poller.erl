@@ -308,7 +308,7 @@ parse_args(Args) ->
 
     #{measurements => Measurements ++ VMMeasurements, period => Period}.
 
--spec parse_vm_measurements([] | default) -> [vm_measurement()].
+-spec parse_vm_measurements(default | [vm_measurement()]) -> [measurement()].
 parse_vm_measurements([]) ->
     [];
 parse_vm_measurements(default) ->
@@ -317,14 +317,16 @@ parse_vm_measurements(Measurements) ->
     __Measurements = sets:from_list(Measurements),
     lists:map(fun parse_vm_measurement/1, sets:to_list(__Measurements)).
 
--spec parse_vm_measurement(measurement()) -> {telemetry_poller_vm, measurement(), list()} | no_return().
+-spec parse_vm_measurement(vm_measurement()) -> {telemetry_poller_vm, vm_measurement(), []} | no_return().
 parse_vm_measurement(Measurement) ->
-    case lists:member(Measurement, ?DEFAULT_VM_MEASUREMENTS) of
-        true -> vm_measurement(Measurement);
-        false -> erlang:error({badarg, "The specified measurement is not currently supported. Consider implementing a custom measurement."}, [Measurement])
+    SupportedMeasurement = lists:member(Measurement, ?DEFAULT_VM_MEASUREMENTS),
+    if SupportedMeasurement =:= false ->
+        erlang:error({badarg, "The specified measurement is not currently supported. Consider implementing a custom measurement."}, [Measurement]);
+        true ->
+            vm_measurement(Measurement)
     end.
 
--spec vm_measurement(atom()) -> measurement().
+-spec vm_measurement(vm_measurement()) -> measurement().
 vm_measurement(Function) ->
     {telemetry_poller_vm, Function, []}.
 
@@ -340,7 +342,7 @@ validate_period(Term) ->
 
 -spec validate_measurements(term()) -> ok | no_return().
 validate_measurements(Measurements) when is_list(Measurements) ->
-    lists:map(fun validate_measurement/1, Measurements);
+    lists:foreach(fun validate_measurement/1, Measurements);
 validate_measurements(Term) ->
     erlang:error({badarg, "Expected measurements to be a list"}, [Term]).
 
