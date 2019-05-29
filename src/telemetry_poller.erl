@@ -369,8 +369,6 @@ make_measurement(Measurement = {M, F, A}) ->
 
 handle_call(get_measurements, _From, State = #{measurements := Measurements}) ->
     {reply, Measurements, State};
-handle_call(stop, _From, State) ->
-    {stop, normal, stopped, State};
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
