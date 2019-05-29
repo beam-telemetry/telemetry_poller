@@ -222,10 +222,7 @@
 -export([
     child_spec/1,
     list_measurements/1,
-    start_link/1,
-    stop/1,
-    stop/2,
-    stop/3
+    start_link/1
 ]).
 
 -export([code_change/3, handle_call/3, handle_cast/2,
@@ -275,22 +272,6 @@ start_link(Opts) when is_list(Opts) ->
     gen_server:start_link({local, Name}, ?MODULE, Args, []).
 
 %% @doc
-%% Stops the poller with specified reason.
-%%
-%% See documentation for {@link gen_server:stop/3} to learn more about the behaviour of this function.
--spec stop(t()) -> ok.
-stop(Poller) ->
-    stop(Poller, normal, inifinity).
-
--spec stop(t(), term()) -> ok.
-stop(Poller, Reason) ->
-    stop(Poller, Reason, inifinity).
-
--spec stop(t(), term(), timeout()) -> ok.
-stop(Poller, Reason, Timeout) ->
-    gen_server:stop(Poller, Reason, Timeout).
-
-%% @doc
 %% Returns a list of measurements used by the poller.
 -spec list_measurements(t()) -> [measurement()].
 list_measurements(Poller) ->
@@ -299,9 +280,9 @@ list_measurements(Poller) ->
 -spec init(map()) -> {ok, state()}.
 init(Args) ->
     schedule_measurement(0),
-    {ok,
-     #{measurements => maps:get(measurements, Args),
-       period => maps:get(period, Args)}}.
+    {ok, #{
+        measurements => maps:get(measurements, Args),
+        period => maps:get(period, Args)}}.
 
 %% @doc
 %% Returns a child spec for the poller for running under a supervisor.
