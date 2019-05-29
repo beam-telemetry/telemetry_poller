@@ -321,7 +321,7 @@ parse_vm_measurements(Measurements) ->
 parse_vm_measurement(Measurement) ->
     case lists:member(Measurement, ?DEFAULT_VM_MEASUREMENTS) of
         true -> vm_measurement(Measurement);
-        false -> erlang:error(badarg, Measurement)
+        false -> erlang:error({badarg, "The specified measurement is not currently supported. Consider implementing a custom measurement."}, [Measurement])
     end.
 
 -spec vm_measurement(atom()) -> measurement().
@@ -336,19 +336,19 @@ schedule_measurement(CollectInMillis) ->
 validate_period(Period) when is_integer(Period), Period > 0 ->
     ok;
 validate_period(Term) ->
-    erlang:error(badarg, Term).
+    erlang:error({badarg, "Expected period to be a positive integer"}, [Term]).
 
 -spec validate_measurements(term()) -> ok | no_return().
 validate_measurements(Measurements) when is_list(Measurements) ->
     lists:map(fun validate_measurement/1, Measurements);
 validate_measurements(Term) ->
-    erlang:error(badarg, Term).
+    erlang:error({badarg, "Expected measurements to be a list"}, [Term]).
 
 -spec validate_measurement(term()) -> ok | no_return().
 validate_measurement({M, F, A}) when is_atom(M), is_atom(F), is_list(A) ->
     ok;
 validate_measurement(Term) ->
-    erlang:error(badarg, Term).
+    erlang:error({badarg, "Expected measurement to be a valid MFA tuple"}, [Term]).
 
 -spec make_measurements_and_filter_misbehaving([measurement()]) -> [measurement()].
 make_measurements_and_filter_misbehaving(Measurements) ->

@@ -13,7 +13,7 @@ all() -> [
   can_be_given_default_vm_measurements,
   can_be_given_default_list_of_vm_measurements,
   can_configure_sampling_period,
-  doesnt_start_given_invalid_measurement,
+  doesnt_start_given_invalid_measurements,
   doesnt_start_given_invalid_period,
   doesnt_start_given_invalid_vm_measurement,
   measurements_can_be_listed,
@@ -41,10 +41,11 @@ can_configure_sampling_period(_Config) ->
   Period = maps:get(period, State).
 
 doesnt_start_given_invalid_period(_Config) ->
-  ?assertError(badarg, telemetry_poller:start_link([{measurements, []}, {period, "1"}])).
+  ?assertError({badarg, "Expected period to be a positive integer"},  telemetry_poller:start_link([{measurements, []}, {period, "1"}])).
 
-doesnt_start_given_invalid_measurement(_Config) ->
-  ?assertError(badarg, telemetry_poller:start_link([{measurements, [invalid_measurement]}])).
+doesnt_start_given_invalid_measurements(_Config) ->
+  ?assertError({badarg, "Expected measurement to be a valid MFA tuple"}, telemetry_poller:start_link([{measurements, [invalid_measurement]}])),
+  ?assertError({badarg, "Expected measurements to be a list"}, telemetry_poller:start_link([{measurements, {}}])).
 
 accepts_mfa_for_dispatching_measurement_as_telemetry_event(_Config) ->
   Event = [a, test, event],
@@ -87,7 +88,7 @@ can_be_given_default_list_of_vm_measurements(_Config) ->
   ?assert(2 =:= erlang:length(Measurements)).
 
 doesnt_start_given_invalid_vm_measurement(_Config) ->
-  ?assertError(badarg, telemetry_poller:start_link([{vm_measurements, [cpu_usage]}])).
+  ?assertError({badarg, "The specified measurement is not currently supported. Consider implementing a custom measurement."}, telemetry_poller:start_link([{vm_measurements, [cpu_usage]}])).
 
 registers_unique_vm_measurements(_Config) ->
   {ok, Poller} = telemetry_poller:start_link([{vm_measurements, [memory, memory]}]),
