@@ -15,10 +15,5 @@ init(Opts) ->
     SupFlags = #{strategy => one_for_one,
                  intensity => 1,
                  period => 5},
-    Poller = #{id => telemetry_poller,
-                  start => {telemetry_poller, start_link, [Opts]},
-                  restart => permanent,
-                  shutdown => 5000,
-                  type => worker,
-                  modules => [telemetry_poller]},
-    {ok, {SupFlags, [Poller]}}.
+    PollerChildSpec = telemetry_poller:child_spec(Opts),
+    {ok, {SupFlags, [PollerChildSpec]}}.
