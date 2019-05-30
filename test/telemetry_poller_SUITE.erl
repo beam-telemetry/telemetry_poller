@@ -5,14 +5,13 @@
 -include_lib("common_test/include/ct.hrl").
 -include_lib("stdlib/include/assert.hrl").
 
--include("support/test_helpers.hrl").
-
 all() -> [
   accepts_mfa_for_dispatching_measurement_as_telemetry_event,
   accepts_name_opt,
   can_be_given_default_vm_measurements,
   can_be_given_default_list_of_vm_measurements,
   can_configure_sampling_period,
+  default_vm_measurements_emit_as_expected,
   doesnt_start_given_invalid_measurements,
   doesnt_start_given_invalid_period,
   doesnt_start_given_invalid_vm_measurement,
@@ -93,3 +92,25 @@ doesnt_start_given_invalid_vm_measurement(_Config) ->
 registers_unique_vm_measurements(_Config) ->
   {ok, Poller} = telemetry_poller:start_link([{vm_measurements, [memory, memory]}]),
   ?assert(1 =:= erlang:length(telemetry_poller:list_measurements(Poller))).
+
+default_vm_measurements_emit_as_expected(_Config) ->
+  MemoryEvent = [vm, memory],
+  RunQueueLengthsEvent = [vm, total_run_queue_lengths],
+  {ok, _Poller} = telemetry_poller:start_link([{vm_measurements, default}, {period, 100}]),
+  lists:foreach(fun(Event) ->
+      HandlerId = attach_to(Event),
+      receive
+        {event, Event, Measurements, _} when is_map(Measurements) ->
+          telemetry:detach(HandlerId),
+          ?assert(true)
+      after
+          1000 ->
+              ct:fail(timeout_receive_echo)
+      end
+    end,
+  [MemoryEvent, RunQueueLengthsEvent]).
+
+attach_to(Event) ->
+  HandlerId = make_ref(),
+  telemetry:attach(HandlerId, Event, fun test_handler:echo_event/4, #{caller => erlang:self()}),
+  HandlerId.
