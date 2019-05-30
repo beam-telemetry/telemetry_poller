@@ -354,8 +354,7 @@ validate_measurement(Term) ->
 
 -spec make_measurements_and_filter_misbehaving([measurement()]) -> [measurement()].
 make_measurements_and_filter_misbehaving(Measurements) ->
-    Results = lists:map(fun make_measurement/1, Measurements),
-    lists:filter(fun(error) -> false; (_) -> true end, Results).
+    [Measurement || Measurement <- Measurements, make_measurement(Measurement) =/= error].
 
 -spec make_measurement(measurement()) -> measurement() | no_return().
 make_measurement(Measurement = {M, F, A}) ->
