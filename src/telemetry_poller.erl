@@ -348,8 +348,8 @@ make_measurement(Measurement = {M, F, A}) ->
         _ -> Measurement
     catch
         ?WITH_STACKTRACE(Class, Reason, Stacktrace)
-            ?LOG_ERROR("Error when calling MFA defined by measurement: ~p ~p ~p ."
-                        "Exception: class=~p reason=~p stacktrace=~p",
+            ?LOG_ERROR("Error when calling MFA defined by measurement: ~p ~p ~p~n"
+                        "Class=~p~nReason=~p~nStacktrace=~p~n",
                         [M, F, A, Class, Reason, Stacktrace]),
                                error
     end.
