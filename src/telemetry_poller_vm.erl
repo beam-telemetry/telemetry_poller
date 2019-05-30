@@ -20,22 +20,14 @@ total_run_queue_lengths() ->
     io => Total - CPU},
     #{}).
 
--ifdef(OTP_RELEASE).
-  -if(?OTP_RELEASE >= 20).
-    -spec cpu_stats(total | cpu) -> non_neg_integer().
-    cpu_stats(total) ->
-      erlang:statistics(total_run_queue_lengths_all);
-    cpu_stats(cpu) ->
-      erlang:statistics(total_run_queue_lengths).
-  -else.
-    -spec cpu_stats(total | cpu) -> non_neg_integer().
-    cpu_stats(_) ->
-      lists:sum(erlang:statistics(run_queue_lengths)).
-  -endif.
--else.
-  % OTP_RELEASE macro is available in OTP 19+ so this covers 18
-  %% TODO: Remove when support is dropped for OTP 18
+-if(?OTP_RELEASE >= 20).
   -spec cpu_stats(total | cpu) -> non_neg_integer().
-    cpu_stats(_) ->
-      lists:sum(erlang:statistics(run_queue_lengths)).
+  cpu_stats(total) ->
+    erlang:statistics(total_run_queue_lengths_all);
+  cpu_stats(cpu) ->
+    erlang:statistics(total_run_queue_lengths).
+-else.
+  -spec cpu_stats(total | cpu) -> non_neg_integer().
+  cpu_stats(_) ->
+    lists:sum(erlang:statistics(run_queue_lengths)).
 -endif.
