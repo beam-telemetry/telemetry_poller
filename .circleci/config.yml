@@ -2,86 +2,53 @@ version: 2.1
 
 orbs:
   telemetry_poller:
-    executors:
-      elixir:
-        parameters:
-          elixir:
-            description: Elixir version to used by the job
-            type: string
-          otp:
-            description: OTP release to used by the job
-            type: string
-        docker:
-          - image: arkgil/alpine-elixir:<<parameters.elixir>>-otp-<<parameters.otp>>
+    orbs:
+      rebar3: tsloughter/rebar3@0.6.3
+      codecov: codecov/codecov@1.0.4
 
     jobs:
       build_and_test:
         parameters:
-          elixir:
-            description: Elixir version to used by the job
-            type: string
-          otp:
-            description: OTP release to used by the job
-            type: string
-          codecov_flag:
-            description: String the coverage reports are grouped by
+          version:
+            description: The Erlang/OTP docker image tag to use.
             type: string
         executor:
-          name: elixir
-          elixir: <<parameters.elixir>>
-          otp: <<parameters.otp>>
+          name: rebar3/erlang
+          tag: <<parameters.version>>
         steps:
-          - run: mix local.hex --force
-          - run: mix local.rebar --force
           - checkout
-          - restore_cache:
-              keys:
-                - dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
-                - dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>
-          - restore_cache:
-              keys:
-                - deps-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
-                - deps-<<parameters.elixir>>-<<parameters.otp>>
-          - run: mix deps.get
-          - run: mix coveralls.json
-          - run: mix dialyzer
-          - run:
-              name: Install curl
-              command: apk add --no-cache curl
-          - run:
-              name: Upload coverage report
-              command: |
-                bash <(curl -s https://codecov.io/bash) \
-                  -F <<parameters.codecov_flag>>
-          - save_cache:
-              key: dialyzer-PLT-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
-              paths:
-              - _build
-          - save_cache:
-              key: deps-<<parameters.elixir>>-<<parameters.otp>>-{{ checksum "mix.lock" }}
-              paths:
-              - deps
+          - rebar3/with_deps_cache:
+              cache_key_postfix: -<<parameters.version>>
+              steps:
+                - rebar3/compile
+                - rebar3/dialyzer
+                - rebar3/xref
+                - rebar3/ct
+
+                - store_test_results:
+                    path: ~/project/_build/test/logs/
+                - store_artifacts:
+                    path: ~/project/_build/test/logs
+                    destination: common_test
+
+                - rebar3/cover
+                - run: rebar3 as test covertool generate
+                - codecov/upload:
+                    file: _build/test/covertool/telemetry.covertool.xml
+                    flags: otp<<parameters.version>>
 
 workflows:
   build_and_test:
     jobs:
       - telemetry_poller/build_and_test:
-          name: "1.8-otp-22"
-          elixir: "1.8.2"
-          otp: "22"
-          codecov_flag: "1_8_otp21"
+          name: "otp-22"
+          version: "22"
       - telemetry_poller/build_and_test:
-          name: "1.8-otp-20"
-          elixir: "1.8.2"
-          otp: "20"
-          codecov_flag: "1_8_otp20"
+          name: "otp-21"
+          version: "21"
       - telemetry_poller/build_and_test:
-          name: "1.5-otp-20"
-          elixir: "1.5.3"
-          otp: "20"
-          codecov_flag: "1_5_otp20"
+          name: "otp-20"
+          version: "20"
       - telemetry_poller/build_and_test:
-          name: "1.5-otp-18"
-          elixir: "1.5.3"
-          otp: "18"
-          codecov_flag: "1_5_otp18"
+          name: "otp-19"
+          version: "19"
