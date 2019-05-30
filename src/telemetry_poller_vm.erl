@@ -23,7 +23,7 @@ total_run_queue_lengths() ->
 -ifdef(OTP19).
   -spec cpu_stats(total | cpu) -> non_neg_integer().
   cpu_stats(_) ->
-  lists:sum(erlang:statistics(run_queue_lengths)).
+    lists:sum(erlang:statistics(run_queue_lengths)).
 -else.
   -spec cpu_stats(total | cpu) -> non_neg_integer().
   cpu_stats(total) ->
