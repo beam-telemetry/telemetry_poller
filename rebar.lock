@@ -1,0 +1,6 @@
+{"1.1.0",
+[{<<"telemetry">>,{pkg,<<"telemetry">>,<<"0.4.0">>},0}]}.
+[
+{pkg_hash,[
+ {<<"telemetry">>, <<"8339BEE3FA8B91CB84D14C2935F8ECF399CCD87301AD6DA6B71C09553834B2AB">>}]}
+].
