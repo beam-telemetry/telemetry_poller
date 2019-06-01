@@ -14,21 +14,40 @@ You can directly consume those events after adding `telemetry_poller` as a depen
 
 Poller also provides a convenient API for running custom pollers. You only need to specify which functions are called periodically to dispatch measurements as Telemetry events:
 
+## Defining custom measurements
+
 #### Erlang
 
 ```erlang
-% define custom function dispatching event with value you're interested in
 -module(example_app_measurements).
 
 dispatch_session_count() ->
-    telemetry:execute([example_app, session_count], example_app:session_count()).
+    % emit a telemetry event when called
+    telemetry:execute([example_app, session_count], #{count => example_app:session_count()}, #{}).
+```
 
+#### Elixir
+
+```elixir
+defmodule ExampleApp.Measurements do
+  def dispatch_session_count() do
+    # emit a telemetry event when called
+    :telemetry.execute([:example_app, :session_count], %{count: ExampleApp.session_count()}, %{})
+  end
+end
+```
+
+## Adding your measurement to a poller instance
+
+#### Erlang
+
+```erlang
 telemetry_poller:start_link(
-  % include custom measurement
+  % include custom measurement as an MFA tuple
   [{measurements, [
     {example_app_measurements, dispatch_session_count, []}
   ]},
-  {period, 10_000} # configure sampling period
+  {period, 10000} % configure sampling period - default is 5000
   ]
 ).
 ```
@@ -36,19 +55,12 @@ telemetry_poller:start_link(
 #### Elixir
 
 ```elixir
-# define custom function dispatching event with value you're interested in
-defmodule ExampleApp.Measurements do
-  def dispatch_session_count() do
-    :telemetry.execute([:example_app, :session_count], ExampleApp.session_count())
-  end
-end
-
 :telemetry_poller.start_link(
-  # include custom measurement
+  # include custom measurement as an MFA tuple
   measurements: [
     {ExampleApp.Measurements, :dispatch_session_count, []}
   ],
-  period: 10_000 # configure sampling period
+  period: 10_000 # configure sampling period - default is 5_000
 )
 ```
 
