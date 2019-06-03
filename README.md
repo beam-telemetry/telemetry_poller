@@ -12,11 +12,27 @@ Allows to periodically collect measurements and dispatch them as Telemetry event
 
 You can directly consume those events after adding `telemetry_poller` as a dependency.
 
-Poller also provides a convenient API for running custom pollers. You only need to specify which functions are called periodically to dispatch measurements as Telemetry events:
+Poller also provides a convenient API for running custom pollers.
 
 ## Defining custom measurements
 
-#### Erlang
+Poller also includes conveniences for performing process-based measurements as well as custom ones.
+
+### Erlang
+
+First define the poller with the custom measurements. The first measurement is the built-in `process_info` measurement and the second one is given by a custom module-function-args defined  by you:
+
+```erlang
+telemetry_poller:start_link(
+  [{measurements, [
+    {process_info, [{name, my_app_worker}, {event, [my_app, worker]}, {measurements, [memory, message_queue_len]}]},
+    {example_app_measurements, dispatch_session_count, []}
+  ]},
+  {period, 10000} % configure sampling period - default is 5000
+]).
+```
+
+Now define the custom measurement and you are good to go:
 
 ```erlang
 -module(example_app_measurements).
@@ -26,7 +42,9 @@ dispatch_session_count() ->
     telemetry:execute([example_app, session_count], #{count => example_app:session_count()}, #{}).
 ```
 
-#### Elixir
+### Elixir
+
+First define the poller with the custom measurements. The first measurement is the built-in `process_info` measurement and the second one is given by a custom module-function-args defined  by you:
 
 ```elixir
 defmodule ExampleApp.Measurements do
@@ -37,38 +55,23 @@ defmodule ExampleApp.Measurements do
 end
 ```
 
-## Adding your measurement to a poller instance
-
-#### Erlang
-
-```erlang
-telemetry_poller:start_link(
-  % include custom measurement as an MFA tuple
-  [{measurements, [
-    {example_app_measurements, dispatch_session_count, []}
-  ]},
-  {period, 10000} % configure sampling period - default is 5000
-  ]
-).
-```
-
-#### Elixir
-
 ```elixir
 :telemetry_poller.start_link(
   # include custom measurement as an MFA tuple
   measurements: [
-    {ExampleApp.Measurements, :dispatch_session_count, []}
+    {:process_info, name: :my_app_worker, event: [:my_app, :worker], measurements: [:message, :message_queue_len]},
+    {ExampleApp.Measurements, :dispatch_session_count, []},
   ],
   period: 10_000 # configure sampling period - default is 5_000
 )
 ```
 
+## Documentation
+
 See [documentation](https://hexdocs.pm/telemetry_poller/) for more concrete examples and usage
 instructions.
 
 ## Copyright and License
-
 
 telemetry_poller is copyright (c) 2018 Chris McCord and Erlang Solutions.
 
