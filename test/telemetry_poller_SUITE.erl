@@ -97,7 +97,7 @@ dispatches_total_run_queue_lengths(_Config) ->
   end.
 
 dispatches_process_info(_Config) ->
-  ProcessInfo = [{name, user}, {event, [my_app, user]}, {measurements, [memory, message_queue_len]}],
+  ProcessInfo = [{name, user}, {event, [my_app, user]}, {keys, [memory, message_queue_len]}],
   {ok, _Poller} = telemetry_poller:start_link([{measurements, [{process_info, ProcessInfo}]},{period, 100}]),
   HandlerId = attach_to([my_app, user]),
   receive

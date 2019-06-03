@@ -25,7 +25,7 @@ First define the poller with the custom measurements. The first measurement is t
 ```erlang
 telemetry_poller:start_link(
   [{measurements, [
-    {process_info, [{name, my_app_worker}, {event, [my_app, worker]}, {measurements, [memory, message_queue_len]}]},
+    {process_info, [{name, my_app_worker}, {event, [my_app, worker]}, {keys, [memory, message_queue_len]}]},
     {example_app_measurements, dispatch_session_count, []}
   ]},
   {period, 10000} % configure sampling period - default is 5000
@@ -59,7 +59,7 @@ end
 :telemetry_poller.start_link(
   # include custom measurement as an MFA tuple
   measurements: [
-    {:process_info, name: :my_app_worker, event: [:my_app, :worker], measurements: [:message, :message_queue_len]},
+    {:process_info, name: :my_app_worker, event: [:my_app, :worker], keys: [:message, :message_queue_len]},
     {ExampleApp.Measurements, :dispatch_session_count, []},
   ],
   period: 10_000 # configure sampling period - default is 5_000

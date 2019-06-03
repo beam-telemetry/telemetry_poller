@@ -75,11 +75,11 @@
 %% {process_info, [
 %%  {name, my_app_worker},
 %%  {event, [my_app, worker]},
-%%  {measurements, [message_queue_len, memory]}
+%%  {keys, [message_queue_len, memory]}
 %% ]}
 %% '''
 %%
-%% The list of measurements is a list of the keys accepted {@link erlang:process_info/2}.
+%% The `keys' is a list of atoms accepted by {@link erlang:process_info/2}.
 %%
 %% == Custom measurements ===
 %%
@@ -192,15 +192,15 @@
 -type t() :: gen_server:server().
 -type options() :: [option()].
 -type option() ::
-    {name, gen_server:name()
+    {name, gen_server:name()}
     | {period, period()}
-    | {measurements, [measurement()]}
-    | {vm_measurements, default | [vm_measurement()]}}.
--type measurement() :: {module(), atom(), []}.
--type period() :: pos_integer().
--type vm_measurement() ::
+    | {measurements, [measurement()]}.
+-type measurement() ::
     memory
-    | total_run_queue_lengths.
+    | total_run_queue_lengths
+    | {process_info, [{name, atom()} | {event, [atom()]} | {keys, [atom()]}]}
+    | {module(), atom(), list()}.
+-type period() :: pos_integer().
 -type state() :: #{measurements => [measurement()], period => period()}.
 
 %% @doc Starts a poller linked to the calling process.
@@ -258,13 +258,13 @@ validate_period(Period) when is_integer(Period), Period > 0 ->
 validate_period(Term) ->
     erlang:error({badarg, "Expected period to be a positive integer"}, [Term]).
 
--spec parse_measurements(term()) -> {module(), function(), list()} | no_return().
+-spec parse_measurements([measurement()]) -> [{module(), function(), list()}].
 parse_measurements(Measurements) when is_list(Measurements) ->
     lists:map(fun parse_measurement/1, Measurements);
 parse_measurements(Term) ->
     erlang:error({badarg, "Expected measurements to be a list"}, [Term]).
 
--spec parse_measurement(term()) -> ok | no_return().
+-spec parse_measurement(measurement()) -> {module(), function(), list()}.
 parse_measurement(memory) ->
     {telemetry_poller_builtin, memory, []};
 parse_measurement(total_run_queue_lengths) ->
@@ -282,13 +282,13 @@ parse_measurement({process_info, List}) when is_list(List) ->
         PropEvent -> erlang:error({badarg, "Expected `event' key to be a list of atoms under process_info measurement"}, [PropEvent])
     end,
 
-    Measurements = case proplists:get_value(measurements, List) of
-        undefined -> erlang:error({badarg, "Expected `measurements' key to be given under process_info measurement"});
-        PropMeasurements when is_list(PropMeasurements) -> PropMeasurements;
-        PropMeasurements -> erlang:error({badarg, "Expected `measurements' key to be a list of atoms under process_info measurement"}, [PropMeasurements])
+    Keys = case proplists:get_value(keys, List) of
+        undefined -> erlang:error({badarg, "Expected `keys' key to be given under process_info measurement"});
+        PropKeys when is_list(PropKeys) -> PropKeys;
+        PropKeys -> erlang:error({badarg, "Expected `keys' key to be a list of atoms under process_info measurement"}, [PropKeys])
     end,
 
-    {telemetry_poller_builtin, process_info, [Event, Name, Measurements]};
+    {telemetry_poller_builtin, process_info, [Event, Name, Keys]};
 parse_measurement({M, F, A}) when is_atom(M), is_atom(F), is_list(A) ->
     {M, F, A};
 parse_measurement(Term) ->
