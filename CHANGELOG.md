@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0](https://github.com/beam-telemetry/telemetry_poller/tree/v0.4.0)
+
+Telemetry Poller has been rewritten in Erlang so it can be used by the overall Erlang community.
+Therefore, the `Telemetry.Poller` module must not be accessed as `telemetry_poller`.
+A new `process_info` measurement has also been added and the `vm_measurements` and `measurements`
+keys have been merged into a single `measurements` key for simplicity.
+
+### Added
+
+- `:process_info` measurement
+
+### Changed
+
+- `vm_measurements` and `measurements`  have been merged into `measurements`
+- `Telemetry.Poller` has been rewritten to `telemetry_poller`
+
 ## [0.3.0](https://github.com/beam-telemetry/telemetry_poller/tree/v0.3.0)
 
 This release marks the upgrade to Telemetry 0.4.0. This means that Poller measurements can emit a map
