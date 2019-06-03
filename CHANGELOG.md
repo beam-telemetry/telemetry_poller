@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.4.0](https://github.com/beam-telemetry/telemetry_poller/tree/v0.4.0)
 
 Telemetry Poller has been rewritten in Erlang so it can be used by the overall Erlang community.
-Therefore, the `Telemetry.Poller` module must not be accessed as `telemetry_poller`.
+Therefore, the `Telemetry.Poller` module must now be accessed as `telemetry_poller`.
 A new `process_info` measurement has also been added and the `vm_measurements` and `measurements`
 keys have been merged into a single `measurements` key for simplicity.
 
