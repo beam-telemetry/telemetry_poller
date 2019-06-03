@@ -258,13 +258,13 @@ validate_period(Period) when is_integer(Period), Period > 0 ->
 validate_period(Term) ->
     erlang:error({badarg, "Expected period to be a positive integer"}, [Term]).
 
--spec parse_measurements([measurement()]) -> [{module(), function(), list()}].
+-spec parse_measurements([measurement()]) -> [{module(), atom(), list()}].
 parse_measurements(Measurements) when is_list(Measurements) ->
     lists:map(fun parse_measurement/1, Measurements);
 parse_measurements(Term) ->
     erlang:error({badarg, "Expected measurements to be a list"}, [Term]).
 
--spec parse_measurement(measurement()) -> {module(), function(), list()}.
+-spec parse_measurement(measurement()) -> {module(), atom(), list()}.
 parse_measurement(memory) ->
     {telemetry_poller_builtin, memory, []};
 parse_measurement(total_run_queue_lengths) ->
