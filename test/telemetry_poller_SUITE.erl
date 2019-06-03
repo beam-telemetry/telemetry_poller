@@ -6,18 +6,16 @@
 -include_lib("stdlib/include/assert.hrl").
 
 all() -> [
-  accepts_mfa_for_dispatching_measurement_as_telemetry_event,
   accepts_name_opt,
-  can_be_given_default_vm_measurements,
-  can_be_given_default_list_of_vm_measurements,
   can_configure_sampling_period,
-  default_vm_measurements_emit_as_expected,
+  dispatches_custom_mfa,
+  dispatches_memory,
+  dispatches_process_info,
+  dispatches_total_run_queue_lengths,
   doesnt_start_given_invalid_measurements,
   doesnt_start_given_invalid_period,
-  doesnt_start_given_invalid_vm_measurement,
   measurements_can_be_listed,
-  measurement_removed_if_it_raises,
-  registers_unique_vm_measurements
+  measurement_removed_if_it_raises
 ].
 
 init_per_suite(Config) ->
@@ -43,10 +41,22 @@ doesnt_start_given_invalid_period(_Config) ->
   ?assertError({badarg, "Expected period to be a positive integer"},  telemetry_poller:start_link([{measurements, []}, {period, "1"}])).
 
 doesnt_start_given_invalid_measurements(_Config) ->
-  ?assertError({badarg, "Expected measurement to be a valid MFA tuple"}, telemetry_poller:start_link([{measurements, [invalid_measurement]}])),
+  ?assertError({badarg, "Expected measurement " ++ _}, telemetry_poller:start_link([{measurements, [invalid_measurement]}])),
   ?assertError({badarg, "Expected measurements to be a list"}, telemetry_poller:start_link([{measurements, {}}])).
 
-accepts_mfa_for_dispatching_measurement_as_telemetry_event(_Config) ->
+measurements_can_be_listed(_Config) ->
+  Measurement1 = {telemetry_poller_builtin, memory, []},
+  Measurement2 = {test_measure, single_sample, [{a, second, test, event}, #{sample => 1}, #{}]},
+  {ok, Poller} = telemetry_poller:start_link([{measurements, [memory, Measurement2]},{period, 100}]),
+  ?assertMatch([Measurement1, Measurement2], telemetry_poller:list_measurements(Poller)).
+
+measurement_removed_if_it_raises(_Config) ->
+  InvalidMeasurement = {test_measure, raise, []},
+  {ok, Poller} = telemetry_poller:start_link([{measurements, [InvalidMeasurement]},{period, 100}]),
+  ct:sleep(200),
+  ?assert([] =:= telemetry_poller:list_measurements(Poller)).
+
+dispatches_custom_mfa(_Config) ->
   Event = [a, test, event],
   Measurements = #{sample => 1},
   Metadata = #{some => "metadata"},
@@ -62,53 +72,42 @@ accepts_mfa_for_dispatching_measurement_as_telemetry_event(_Config) ->
   end,
   telemetry:detach(HandlerId).
 
-measurements_can_be_listed(_Config) ->
-  Measurement1 = {telemetry_poller_vm, memory, []},
-  Measurement2 = {test_measure, single_sample, [{a, second, test, event}, #{sample => 1}, #{}]},
-  {ok, Poller} = telemetry_poller:start_link([{measurements, [Measurement1, Measurement2]},{period, 100}]),
-  ?assertMatch([Measurement1, Measurement2], telemetry_poller:list_measurements(Poller)).
+dispatches_memory(_Config) ->
+  {ok, _Poller} = telemetry_poller:start_link([{measurements, [memory]},{period, 100}]),
+  HandlerId = attach_to([vm, memory]),
+  receive
+    {event, [vm, memory], #{total := _}, _} ->
+      telemetry:detach(HandlerId),
+      ?assert(true)
+  after
+      1000 ->
+          ct:fail(timeout_receive_echo)
+  end.
 
-measurement_removed_if_it_raises(_Config) ->
-  InvalidMeasurement = {test_measure, raise, []},
-  {ok, Poller} = telemetry_poller:start_link([{measurements, [InvalidMeasurement]},{period, 100}]),
-  ct:sleep(200),
-  ?assert([] =:= telemetry_poller:list_measurements(Poller)).
+dispatches_total_run_queue_lengths(_Config) ->
+  {ok, _Poller} = telemetry_poller:start_link([{measurements, [total_run_queue_lengths]},{period, 100}]),
+  HandlerId = attach_to([vm, total_run_queue_lengths]),
+  receive
+    {event, [vm, total_run_queue_lengths], #{total := _, cpu := _, io := _}, _} ->
+      telemetry:detach(HandlerId),
+      ?assert(true)
+  after
+      1000 ->
+          ct:fail(timeout_receive_echo)
+  end.
 
-can_be_given_default_vm_measurements(_Config) ->
-  MeasurementFuns = [memory, total_run_queue_lengths],
-  {ok, Poller} = telemetry_poller:start_link([{vm_measurements, default}]),
-  Measurements = telemetry_poller:list_measurements(Poller),
-  ?assert(lists:all(fun(F) -> lists:member({telemetry_poller_vm, F, []}, Measurements) end, MeasurementFuns)).
-
-can_be_given_default_list_of_vm_measurements(_Config) ->
-  VMMeasurements = [memory, total_run_queue_lengths],
-  {ok, Poller} = telemetry_poller:start_link([{vm_measurements,VMMeasurements}]),
-  Measurements = telemetry_poller:list_measurements(Poller),
-  ?assert(2 =:= erlang:length(Measurements)).
-
-doesnt_start_given_invalid_vm_measurement(_Config) ->
-  ?assertError({badarg, "The specified measurement is not currently supported. Consider implementing a custom measurement."}, telemetry_poller:start_link([{vm_measurements, [cpu_usage]}])).
-
-registers_unique_vm_measurements(_Config) ->
-  {ok, Poller} = telemetry_poller:start_link([{vm_measurements, [memory, memory]}]),
-  ?assert(1 =:= erlang:length(telemetry_poller:list_measurements(Poller))).
-
-default_vm_measurements_emit_as_expected(_Config) ->
-  MemoryEvent = [vm, memory],
-  RunQueueLengthsEvent = [vm, total_run_queue_lengths],
-  {ok, _Poller} = telemetry_poller:start_link([{vm_measurements, default}, {period, 100}]),
-  lists:foreach(fun(Event) ->
-      HandlerId = attach_to(Event),
-      receive
-        {event, Event, Measurements, _} when is_map(Measurements) ->
-          telemetry:detach(HandlerId),
-          ?assert(true)
-      after
-          1000 ->
-              ct:fail(timeout_receive_echo)
-      end
-    end,
-  [MemoryEvent, RunQueueLengthsEvent]).
+dispatches_process_info(_Config) ->
+  ProcessInfo = [{name, user}, {event, [my_app, user]}, {measurements, [memory, message_queue_len]}],
+  {ok, _Poller} = telemetry_poller:start_link([{measurements, [{process_info, ProcessInfo}]},{period, 100}]),
+  HandlerId = attach_to([my_app, user]),
+  receive
+    {event, [my_app, user], #{memory := _, message_queue_len := _}, #{name := user}} ->
+      telemetry:detach(HandlerId),
+      ?assert(true)
+  after
+      1000 ->
+          ct:fail(timeout_receive_echo)
+  end.
 
 attach_to(Event) ->
   HandlerId = make_ref(),

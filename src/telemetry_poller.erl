@@ -2,168 +2,111 @@
 %% @doc
 %% A time-based poller to periodically dispatch Telemetry events.
 %%
-%% Poller comes with a built-in poller but also allows you to run
-%% your own. Let's see how.
+%% A poller is a process start in your supervision tree with a list
+%% of measurements to perform periodically. On start it expects the
+%% period in milliseconds and a list of measurements to perform:
 %%
-%% == Built-in poller ==
+%% ```
+%% telemetry_poller:start_link([
+%%   {measurements, Measurements},
+%%   {period, Period}
+%% ])
+%% '''
 %%
-%% A single poller is started under the `telemetry_poller' application.
-%% It is started with name `telemetry_poller_default' and its goal is
-%% to perform common VM measurements.
+%% The following measurements are supported:
 %%
-%% By default, it polls all default VM measurements, but you
-%% may specify all VM measurements you want:
+%%  * `memory' (default)
+%%  * `total_run_queue_lengths' (default)
+%%  * `{process_info, Proplist}'
+%%  * `{Module, Function, Args}'
 %%
-%% `[{vm_measurements, [memory}] # measure only the memory'
+%% We will discuss each measurement in detail. Also note that the
+%% telemetry_poller application ships with a built-in poller that
+%% measures both `memory' and `total_run_queue_lengths'. This takes
+%% the VM measurement out of the way so your application can focus
+%% on what is specific to its behaviour.
 %%
-%% You can disable the default poller by setting it to `false' in
-%% your config.
+%% == Memory ==
 %%
-%% Let's take a closer look at the available measurements.
+%% An event emitted as `[vm, memory]'. The measurement includes all
+%% the key-value pairs returned by {@link erlang:memory/0} function,
+%% e.g. `total' for total memory, `processes_used' for memory used by
+%% all processes, etc.
 %%
-%% === Memory (default) ===
+%% == Total run queue lengths ===
 %%
-%% An event emitted as `[vm, memory]'. The measurement includes all the key-value
-%% pairs returned by {@link erlang:memory/0} function, e.g. `total' for total memory,
-%% `processes_used' for memory used by all processes, etc.
+%% On startup, the Erlang VM starts many schedulers to do both IO and
+%% CPU work. If a process needs to do some work or wait on IO, it is
+%% allocated to the appropriate scheduler. The run queue is a queue of
+%% tasks to be scheduled. A length of a run queue corresponds to the amount
+%% of work accumulated in the system. If a run queue length is constantly
+%% growing, it means that the BEAM is not keeping up with executing all
+%% the tasks.
 %%
-%% === Run queue lengths (default) ===
+%% There are several run queue types in the Erlang VM. Each CPU scheduler
+%% (usually one per core) has its own run queue, and since Erlang 20.0 there
+%% is one dirty CPU run queue, and one dirty IO run queue.
 %%
-%% On startup, the Erlang VM starts many schedulers to do both IO and CPU work. If a process
-%% needs to do some work or wait on IO, it is allocated to the appropriate scheduler. The run
-%% queue is a queue of tasks to be scheduled. A length of a run queue corresponds to the amount
-%% of work accumulated in the system. If a run queue length is constantly growing, it means that
-%% the BEAM is not keeping up with executing all the tasks.
+%% The run queue length event is emitted as `[vm, total_run_queue_lengths]'.
+%% The event contains no metadata and three measurements:
 %%
-%% There are several run queue types in the Erlang VM. Each CPU scheduler (usually one per core)
-%% has its own run queue, and since Erlang 20.0 there is one dirty CPU run queue, and one dirty
-%% IO run queue.
-%%
-%% The run queue length event is emitted as `[vm, total_run_queue_lengths]'. The event contains
-%% no metadata and three measurements:
 %% <ul>
 %% <li>`total' - a sum of all run queue lengths</li>
 %% <li>`cpu' - a sum of CPU schedulers' run queue lengths, including dirty CPU run queue length on Erlang version 20 and greater</li>
 %% <li>`io' - length of dirty IO run queue. It's always 0 if running on Erlang versions prior to 20.</li>
 %% </ul>
-%% Note that the method of making this measurement varies between different Erlang versions: for
-%% Erlang 18 and 19, the implementation is less efficient than for version 20 and up.
 %%
-%% The length of all queues is not gathered atomically, so the event value does not represent
-%% a consistent snapshot of the run queues' state. However, the value is accurate enough to help
-%% to identify issues in a running system.
+%% Note that the method of making this measurement varies between different
+%% Erlang versions: the implementation on versions earlier than Erlang/OTP 20
+%% is less efficient.
 %%
-%% === Custom pollers ===
+%% The length of all queues is not gathered atomically, so the event value
+%% does not represent a consistent snapshot of the run queues' state.
+%% However, the value is accurate enough to help to identify issues in a
+%% running system.
 %%
-%% Telemetry poller also allows you to perform custom measurements by spawning
-%% your own poller process:
+%% == Process info ==
+%%
+%% A measurement with information about a given process. It must be specified
+%% alongside a proplist with the process name, the event name, and a list of
+%% keys to be included:
+%%
 %% ```
-%% {measurements, [myapp_example, measure, []]}
+%% {process_info, [
+%%  {name, my_app_worker},
+%%  {event, [my_app, worker]},
+%%  {measurements, [message_queue_len, memory]}
+%% ]}
 %% '''
 %%
-%% For custom pollers, the measurements are given as MFAs. Those MFAs should
-%% dispatch an event using `telemetry:execute/3' function. If the invokation
-%% of the MFA fails, the measurement is removed from the Poller.
+%% The list of measurements is a list of the keys accepted {@link erlang:process_info/2}.
+%%
+%% == Custom measurements ===
+%%
+%% Telemetry poller also allows you to perform custom measurements by passing
+%% a module-function-args tuple:
+%%
+%%     {my_app_example, measure, []}
+%%
+%% The given function will be invoked periodically and they must explicitly invoke
+%% `telemetry:execute/3' function. If the invokation of the MFA fails, the measurement
+%% is removed from the Poller.
 %%
 %% For all options, see {@link start_link/1}. The options listed there can be given
 %% to the default poller as well as to custom pollers.
 %%
-%% === Example - measuring message queue length of the process ===
+%% == Default poller ==
 %%
-%% Measuring process' message queue length is a good way to find out if and when the
-%% process becomes the bottleneck. If the length of the queue is growing, it means that
-%% the process is not keeping up with the work it's been assigned and other processes
-%% asking it to do the work will get timeouts. Let's try to simulate that situation
-%% using the following gen_server:
+%% A default poller is started with `telemetry_poller' responsible for emitting
+%% measurements for `memory' and `total_run_queue_lengths'. You can customize
+%% the behaviour of the default poller by setting the `default' key under the
+%% `telemetry_poller' application environment. Setting it to `false' disables
+%% the poller.
 %%
-%% ```
-%% -module(worker).
-%% -behaviour(gen_server).
+%% == Example - tracking number of active sessions in web application ==
 %%
-%% start_link(Name) ->
-%%    gen_server:start_link(?MODULE, [], [{name, Name}]).
-%%
-%% init([]) ->
-%%    {ok, #{}}.
-%%
-%% do_work(Name) ->
-%%    gen_server:call(Name, do_work, [{timeout, 5000}]).
-%%
-%% handle_call(do_work, _, State) ->
-%%    timer:sleep(1000).
-%%
-%% ...
-%% '''
-%%
-%% When assigned with work (`handle_call/3'), the worker will sleep for 1 second to
-%% imitate long running task.
-%% Now we need a measurement dispatching the process info so that we can
-%% extract the message queue length of the worker:
-%%
-%% ```
-%% -module(example_app_measurements).
-%%
-%% message_queue_length(Name) ->
-%%    Pid = erlang:whereis(Name),
-%%    ProcessInfo = erlang:process_info(Pid),
-%%    telemetry:execute([example_app, process_info], ProcessInfo, #{name => Name}).
-%% '''
-%%
-%% In order to observe the message queue length we can install the event handler printing it out to
-%% the console:
-%% ```
-%% -module(message_length_handler).
-%%
-%% handle([example_app, process_info], #{message_queue_length => Length}, #{name => Name}) ->
-%%    io:format("Process ~p~n message queue length: ~p", [Name, Length]).
-%% '''
-%%
-%% Let's start the worker and poller with the just defined measurement:
-%%
-%% ```
-%% # erl
-%% > Name = my_worker.
-%% > {ok, Pid} = worker:start_link(Name).
-%% > telemetry_poller:start_link([{measurements, [{example_app_measurements, process_info}, [Name]}], {period, 2000}]).
-%% > telemetry:attach(handler, [example_app, process_info], message_length_handler:handle/4, nil).
-%% '''
-%%
-%% Now let's start assigning work to the worker:
-%%
-%% ```
-%% #erl
-%% > Name = my_worker.
-%% > Iterations = lists:seq(1, 1000).
-%% > lists:map(fun(I) -> erlang:spawn_link(fun() -> worker:do_work(Name) end.), timer:sleep(500) end.).
-%% '''
-%%  Here we start 1000 processes placing a work order, waiting 500 milliseconds after starting each
-%% one. Given that the worker does its work in 1000 milliseconds, it means that new work orders come
-%% twice as fast as the worker is able to complete them. In the console, you'll see something like
-%% this:
-%%
-%% ```
-%% Process MyWorker message queue length: 1
-%% Process MyWorker message queue length: 3
-%% Process MyWorker message queue length: 5
-%% Process MyWorker message queue length: 7
-%% '''
-%%
-%% and finally:
-%%
-%% ```
-%% ** (EXIT from #PID<0.168.0>) shell process exited with reason: exited in: :gen_server.call(worker, do_work, 5000)
-%% ** (EXIT) time out
-%% '''
-%%
-%% The worker wasn't able to complete the work on time (we set the 5000 millisecond timeout) and
-%% `worker:do_work/1' finally failed. Observing the message queue length metric allowed us to notice
-%% that the worker is the system's bottleneck. In a healthy situation the message queue length would
-%% be roughly constant.
-%%
-%% === Example - tracking number of active sessions in web application ===
-%%
-%% Let's imagine that you have a web application and you would like to periodically measure number
-%% of active user sessions.
+%% Let's imagine that you have a web application and you would like to periodically
+%% measure number of active user sessions.
 %%
 %% ```
 %% -module(example_app).
@@ -228,8 +171,6 @@
 -export([code_change/3, handle_call/3, handle_cast/2,
      handle_info/2, init/1, terminate/2]).
 
--define(DEFAULT_VM_MEASUREMENTS, [memory, total_run_queue_lengths]).
-
 -ifdef('OTP_RELEASE').
 -include_lib("kernel/include/logger.hrl").
 -else.
@@ -288,7 +229,8 @@ init(Args) ->
 %% Returns a child spec for the poller for running under a supervisor.
 child_spec(Opts) ->
     Id =
-        case proplists:get_value(name, Opts, telemetry_poller_default) of
+        case proplists:get_value(name, Opts) of
+            undefined -> ?MODULE;
             Name when is_atom(Name) -> Name;
             {global, Name} -> Name;
             {via, _, Name} -> Name
@@ -301,34 +243,10 @@ child_spec(Opts) ->
 
 parse_args(Args) ->
     Measurements = proplists:get_value(measurements, Args, []),
-    validate_measurements(Measurements),
+    ParsedMeasurements = parse_measurements(Measurements),
     Period = proplists:get_value(period, Args, 5000),
     validate_period(Period),
-    VMMeasurements = parse_vm_measurements(proplists:get_value(vm_measurements, Args, [])),
-
-    #{measurements => Measurements ++ VMMeasurements, period => Period}.
-
--spec parse_vm_measurements(default | [vm_measurement()]) -> [measurement()].
-parse_vm_measurements([]) ->
-    [];
-parse_vm_measurements(default) ->
-    parse_vm_measurements(?DEFAULT_VM_MEASUREMENTS);
-parse_vm_measurements(Measurements) ->
-    __Measurements = sets:from_list(Measurements),
-    lists:map(fun parse_vm_measurement/1, sets:to_list(__Measurements)).
-
--spec parse_vm_measurement(vm_measurement()) -> {telemetry_poller_vm, vm_measurement(), []} | no_return().
-parse_vm_measurement(Measurement) ->
-    SupportedMeasurement = lists:member(Measurement, ?DEFAULT_VM_MEASUREMENTS),
-    if SupportedMeasurement =:= false ->
-        erlang:error({badarg, "The specified measurement is not currently supported. Consider implementing a custom measurement."}, [Measurement]);
-        true ->
-            vm_measurement(Measurement)
-    end.
-
--spec vm_measurement(vm_measurement()) -> measurement().
-vm_measurement(Function) ->
-    {telemetry_poller_vm, Function, []}.
+    #{measurements => ParsedMeasurements, period => Period}.
 
 -spec schedule_measurement(non_neg_integer()) -> ok.
 schedule_measurement(CollectInMillis) ->
@@ -340,17 +258,41 @@ validate_period(Period) when is_integer(Period), Period > 0 ->
 validate_period(Term) ->
     erlang:error({badarg, "Expected period to be a positive integer"}, [Term]).
 
--spec validate_measurements(term()) -> ok | no_return().
-validate_measurements(Measurements) when is_list(Measurements) ->
-    lists:foreach(fun validate_measurement/1, Measurements);
-validate_measurements(Term) ->
+-spec parse_measurements(term()) -> {module(), function(), list()} | no_return().
+parse_measurements(Measurements) when is_list(Measurements) ->
+    lists:map(fun parse_measurement/1, Measurements);
+parse_measurements(Term) ->
     erlang:error({badarg, "Expected measurements to be a list"}, [Term]).
 
--spec validate_measurement(term()) -> ok | no_return().
-validate_measurement({M, F, A}) when is_atom(M), is_atom(F), is_list(A) ->
-    ok;
-validate_measurement(Term) ->
-    erlang:error({badarg, "Expected measurement to be a valid MFA tuple"}, [Term]).
+-spec parse_measurement(term()) -> ok | no_return().
+parse_measurement(memory) ->
+    {telemetry_poller_builtin, memory, []};
+parse_measurement(total_run_queue_lengths) ->
+    {telemetry_poller_builtin, total_run_queue_lengths, []};
+parse_measurement({process_info, List}) when is_list(List) ->
+    Name = case proplists:get_value(name, List) of
+        undefined -> erlang:error({badarg, "Expected `name' key to be given under process_info measurement"});
+        PropName when is_atom(PropName) -> PropName;
+        PropName -> erlang:error({badarg, "Expected `name' key to be an atom under process_info measurement"}, [PropName])
+    end,
+
+    Event = case proplists:get_value(event, List) of
+        undefined -> erlang:error({badarg, "Expected `event' key to be given under process_info measurement"});
+        PropEvent when is_list(PropEvent) -> PropEvent;
+        PropEvent -> erlang:error({badarg, "Expected `event' key to be a list of atoms under process_info measurement"}, [PropEvent])
+    end,
+
+    Measurements = case proplists:get_value(measurements, List) of
+        undefined -> erlang:error({badarg, "Expected `measurements' key to be given under process_info measurement"});
+        PropMeasurements when is_list(PropMeasurements) -> PropMeasurements;
+        PropMeasurements -> erlang:error({badarg, "Expected `measurements' key to be a list of atoms under process_info measurement"}, [PropMeasurements])
+    end,
+
+    {telemetry_poller_builtin, process_info, [Event, Name, Measurements]};
+parse_measurement({M, F, A}) when is_atom(M), is_atom(F), is_list(A) ->
+    {M, F, A};
+parse_measurement(Term) ->
+    erlang:error({badarg, "Expected measurement to be memory, total_run_queue_lenths, {process_info, list()}, or a {module(), function(), list()} tuple"}, [Term]).
 
 -spec make_measurements_and_filter_misbehaving([measurement()]) -> [measurement()].
 make_measurements_and_filter_misbehaving(Measurements) ->

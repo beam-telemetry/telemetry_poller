@@ -9,7 +9,7 @@ start(_StartType, _StartArgs) ->
     PollerOpts = application:get_env(telemetry_poller, default, []),
     Default = #{
         name => telemetry_poller_default,
-        vm_measurements => default
+        measurements => [memory, total_run_queue_lengths]
     },
     FinalOpts = maps:merge(Default, maps:from_list(PollerOpts)),
     telemetry_poller_sup:start_link(maps:to_list(FinalOpts)).
