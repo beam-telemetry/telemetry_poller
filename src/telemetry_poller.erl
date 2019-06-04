@@ -33,7 +33,7 @@
 %% e.g. `total' for total memory, `processes_used' for memory used by
 %% all processes, etc.
 %%
-%% == Total run queue lengths ===
+%% == Total run queue lengths ==
 %%
 %% On startup, the Erlang VM starts many schedulers to do both IO and
 %% CPU work. If a process needs to do some work or wait on IO, it is
@@ -81,7 +81,7 @@
 %%
 %% The `keys' is a list of atoms accepted by {@link erlang:process_info/2}.
 %%
-%% == Custom measurements ===
+%% == Custom measurements ==
 %%
 %% Telemetry poller also allows you to perform custom measurements by passing
 %% a module-function-args tuple:
