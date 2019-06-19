@@ -206,6 +206,8 @@
 %% @doc Starts a poller linked to the calling process.
 %%
 %% Useful for starting Pollers as a part of a supervision tree.
+%%
+%% Default options: [{name, telemetry_poller}, {period, 5000}]
 -spec start_link(options()) -> gen_server:on_start().
 start_link(Opts) when is_list(Opts) ->
     Name = proplists:get_value(name, Opts, ?MODULE),
