@@ -210,9 +210,12 @@
 %% Default options: [{name, telemetry_poller}, {period, 5000}]
 -spec start_link(options()) -> gen_server:on_start().
 start_link(Opts) when is_list(Opts) ->
-    Name = proplists:get_value(name, Opts, ?MODULE),
     Args = parse_args(Opts),
-    gen_server:start_link({local, Name}, ?MODULE, Args, []).
+
+    case lists:keyfind(name, 1, Opts) of
+        {name, Name} -> gen_server:start_link({local, Name}, ?MODULE, Args, []);
+        false -> gen_server:start_link(?MODULE, Args, [])
+    end.
 
 %% @doc
 %% Returns a list of measurements used by the poller.

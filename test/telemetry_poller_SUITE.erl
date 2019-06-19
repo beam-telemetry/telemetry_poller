@@ -15,7 +15,8 @@ all() -> [
   doesnt_start_given_invalid_measurements,
   doesnt_start_given_invalid_period,
   measurements_can_be_listed,
-  measurement_removed_if_it_raises
+  measurement_removed_if_it_raises,
+  multiple_unnamed
 ].
 
 init_per_suite(Config) ->
@@ -30,6 +31,11 @@ accepts_name_opt(_Config) ->
   {ok, Pid} = telemetry_poller:start_link([{name, Name}]),
   FoundPid = erlang:whereis(Name),
   FoundPid = Pid.
+
+multiple_unnamed(_Config) ->
+  {ok, _} = telemetry_poller:start_link([]),
+  {ok, _} = telemetry_poller:start_link([]),
+  ok.
 
 can_configure_sampling_period(_Config) ->
   Period = 500,
