@@ -64,7 +64,7 @@ end
     {ExampleApp.Measurements, :dispatch_session_count, []},
   ],
   period: 10_000, # configure sampling period - default is 5_000
-  name: :my_app_worker_telemetry_poller # configure name - default is `:telemetry_poller`
+  name: :my_app_poller # configure name - default is `:telemetry_poller`
 )
 ```
 
