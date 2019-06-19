@@ -29,7 +29,7 @@ telemetry_poller:start_link(
     {example_app_measurements, dispatch_session_count, []}
   ]},
   {period, 10000}, % configure sampling period - default is 5000
-  {name, my_app_worker_telemetry_poller} % configure name - default is `telemetry_poller`
+  {name, my_app_poller} % configure name - default is `telemetry_poller`
 ]).
 ```
 
