@@ -11,6 +11,7 @@ all() -> [
   dispatches_custom_mfa,
   dispatches_memory,
   dispatches_process_info,
+  dispatches_system_limits,
   dispatches_total_run_queue_lengths,
   doesnt_start_given_invalid_measurements,
   doesnt_start_given_invalid_period,
@@ -95,6 +96,18 @@ dispatches_total_run_queue_lengths(_Config) ->
   HandlerId = attach_to([vm, total_run_queue_lengths]),
   receive
     {event, [vm, total_run_queue_lengths], #{total := _, cpu := _, io := _}, _} ->
+      telemetry:detach(HandlerId),
+      ?assert(true)
+  after
+      1000 ->
+          ct:fail(timeout_receive_echo)
+  end.
+
+dispatches_system_limits(_Config) ->
+  {ok, _Poller} = telemetry_poller:start_link([{measurements, [system_limits]},{period, 100}]),
+  HandlerId = attach_to([vm, system_limits]),
+  receive
+    {event, [vm, system_limits], #{process_count := _, atom_count := _, port_count := _}, _} ->
       telemetry:detach(HandlerId),
       ?assert(true)
   after

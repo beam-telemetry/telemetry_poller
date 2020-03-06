@@ -17,12 +17,13 @@
 %%
 %%  * `memory' (default)
 %%  * `total_run_queue_lengths' (default)
+%%  * `system_limits' (default)
 %%  * `{process_info, Proplist}'
 %%  * `{Module, Function, Args}'
 %%
 %% We will discuss each measurement in detail. Also note that the
 %% telemetry_poller application ships with a built-in poller that
-%% measures both `memory' and `total_run_queue_lengths'. This takes
+%% measures `memory', `total_run_queue_lengths' and `system_limits'. This takes
 %% the VM measurement out of the way so your application can focus
 %% on what is specific to its behaviour.
 %%
@@ -64,6 +65,19 @@
 %% does not represent a consistent snapshot of the run queues' state.
 %% However, the value is accurate enough to help to identify issues in a
 %% running system.
+%%
+%% == System limits ==
+%%
+%% An event emitted as `[vm, system_limits]'. The event contains no metadata
+%% and three measurements:
+%%
+%% <ul>
+%% <li>`process_count' - number of process currently existing at the local node</li>
+%% <li>`atom_count' - number of atoms currently existing at the local node</li>
+%% <li>`port_count' - number of ports currently existing at the local node</li>
+%% </ul>
+%% 
+%% All three measurements are from {@link erlang:system_info/1}.
 %%
 %% == Process info ==
 %%
@@ -198,6 +212,7 @@
 -type measurement() ::
     memory
     | total_run_queue_lengths
+    | system_limits
     | {process_info, [{name, atom()} | {event, [atom()]} | {keys, [atom()]}]}
     | {module(), atom(), list()}.
 -type period() :: pos_integer().
@@ -274,6 +289,8 @@ parse_measurement(memory) ->
     {telemetry_poller_builtin, memory, []};
 parse_measurement(total_run_queue_lengths) ->
     {telemetry_poller_builtin, total_run_queue_lengths, []};
+parse_measurement(system_limits) ->
+    {telemetry_poller_builtin, system_limits, []};
 parse_measurement({process_info, List}) when is_list(List) ->
     Name = case proplists:get_value(name, List) of
         undefined -> erlang:error({badarg, "Expected `name' key to be given under process_info measurement"});
