@@ -3,6 +3,7 @@
 -export([
   memory/0,
   total_run_queue_lengths/0,
+  system_counts/0,
   process_info/3
 ]).
 
@@ -31,6 +32,17 @@ total_run_queue_lengths() ->
         cpu => CPU,
         io => Total - CPU},
         #{}).
+
+-spec system_counts() -> ok.
+system_counts() ->
+    ProcessCount = erlang:system_info(process_count),
+    AtomCount = erlang:system_info(atom_count),
+    PortCount = erlang:system_info(port_count),
+    telemetry:execute([vm, system_counts], #{
+        process_count => ProcessCount,
+        atom_count => AtomCount,
+        port_count => PortCount
+    }).
 
 -ifdef(OTP19).
     -spec cpu_stats(total | cpu) -> non_neg_integer().
