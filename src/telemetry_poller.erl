@@ -17,13 +17,13 @@
 %%
 %%  * `memory' (default)
 %%  * `total_run_queue_lengths' (default)
-%%  * `system_limits' (default)
+%%  * `system_counts' (default)
 %%  * `{process_info, Proplist}'
 %%  * `{Module, Function, Args}'
 %%
 %% We will discuss each measurement in detail. Also note that the
 %% telemetry_poller application ships with a built-in poller that
-%% measures `memory', `total_run_queue_lengths' and `system_limits'. This takes
+%% measures `memory', `total_run_queue_lengths' and `system_counts'. This takes
 %% the VM measurement out of the way so your application can focus
 %% on what is specific to its behaviour.
 %%
@@ -66,9 +66,9 @@
 %% However, the value is accurate enough to help to identify issues in a
 %% running system.
 %%
-%% == System limits ==
+%% == System counts ==
 %%
-%% An event emitted as `[vm, system_limits]'. The event contains no metadata
+%% An event emitted as `[vm, system_counts]'. The event contains no metadata
 %% and three measurements:
 %%
 %% <ul>
@@ -212,7 +212,7 @@
 -type measurement() ::
     memory
     | total_run_queue_lengths
-    | system_limits
+    | system_counts
     | {process_info, [{name, atom()} | {event, [atom()]} | {keys, [atom()]}]}
     | {module(), atom(), list()}.
 -type period() :: pos_integer().
@@ -289,8 +289,8 @@ parse_measurement(memory) ->
     {telemetry_poller_builtin, memory, []};
 parse_measurement(total_run_queue_lengths) ->
     {telemetry_poller_builtin, total_run_queue_lengths, []};
-parse_measurement(system_limits) ->
-    {telemetry_poller_builtin, system_limits, []};
+parse_measurement(system_counts) ->
+    {telemetry_poller_builtin, system_counts, []};
 parse_measurement({process_info, List}) when is_list(List) ->
     Name = case proplists:get_value(name, List) of
         undefined -> erlang:error({badarg, "Expected `name' key to be given under process_info measurement"});
