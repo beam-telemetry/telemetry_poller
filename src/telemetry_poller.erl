@@ -185,23 +185,7 @@
 -export([code_change/3, handle_call/3, handle_cast/2,
      handle_info/2, init/1, terminate/2]).
 
--ifdef('OTP_RELEASE').
 -include_lib("kernel/include/logger.hrl").
--else.
--define(LOG_ERROR(Msg, Args), error_logger:error_msg(Msg, Args)).
--endif.
-
--ifdef('OTP_RELEASE').
--include_lib("kernel/include/logger.hrl").
--else.
--define(LOG_WARNING(Msg, Args), error_logger:warning_msg(Msg, Args)).
--endif.
-
--ifdef('OTP_RELEASE').
--define(WITH_STACKTRACE(T, R, S), T:R:S ->).
--else.
--define(WITH_STACKTRACE(T, R, S), T:R -> S = erlang:get_stacktrace(),).
--endif.
 
 -type t() :: gen_server:server().
 -type options() :: [option()].
@@ -325,7 +309,7 @@ make_measurement(Measurement = {M, F, A}) ->
     try erlang:apply(M, F, A) of
         _ -> Measurement
     catch
-        ?WITH_STACKTRACE(Class, Reason, Stacktrace)
+        Class:Reason:Stacktrace ->
             ?LOG_ERROR("Error when calling MFA defined by measurement: ~p ~p ~p~n"
                         "Class=~p~nReason=~p~nStacktrace=~p~n",
                         [M, F, A, Class, Reason, Stacktrace]),

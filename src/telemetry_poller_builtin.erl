@@ -25,8 +25,8 @@ memory() ->
 
 -spec total_run_queue_lengths() -> ok.
 total_run_queue_lengths() ->
-    Total = cpu_stats(total),
-    CPU = cpu_stats(cpu),
+    Total = erlang:statistics(total_run_queue_lengths_all),
+    CPU = erlang:statistics(total_run_queue_lengths),
     telemetry:execute([vm, total_run_queue_lengths], #{
         total => Total,
         cpu => CPU,
@@ -43,15 +43,3 @@ system_counts() ->
         atom_count => AtomCount,
         port_count => PortCount
     }).
-
--ifdef(OTP19).
-    -spec cpu_stats(total | cpu) -> non_neg_integer().
-    cpu_stats(_) ->
-        lists:sum(erlang:statistics(run_queue_lengths)).
--else.
-    -spec cpu_stats(total | cpu) -> non_neg_integer().
-    cpu_stats(total) ->
-        erlang:statistics(total_run_queue_lengths_all);
-    cpu_stats(cpu) ->
-        erlang:statistics(total_run_queue_lengths).
--endif.
