@@ -49,3 +49,7 @@ workflows:
       - telemetry_poller/build_and_test:
           name: "otp-20"
           version: "20"
+      - telemetry_poller/build_and_test:
+          name: "otp-19"
+          version: "19"
+
