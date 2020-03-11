@@ -103,11 +103,17 @@ dispatches_total_run_queue_lengths(_Config) ->
           ct:fail(timeout_receive_echo)
   end.
 
+-ifdef(OTP19).
+    -define(system_counts_pattern, #{process_count := _, port_count := _}).
+-else.
+    -define(system_counts_pattern, #{process_count := _, atom_count := _, port_count := _}).
+-endif.
+
 dispatches_system_counts(_Config) ->
   {ok, _Poller} = telemetry_poller:start_link([{measurements, [system_counts]},{period, 100}]),
   HandlerId = attach_to([vm, system_counts]),
   receive
-    {event, [vm, system_counts], #{process_count := _, atom_count := _, port_count := _}, _} ->
+    {event, [vm, system_counts], ?system_counts_pattern, _} ->
       telemetry:detach(HandlerId),
       ?assert(true)
   after
