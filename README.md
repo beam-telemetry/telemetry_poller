@@ -9,7 +9,7 @@ Allows to periodically collect measurements and dispatch them as Telemetry event
 
   * `[vm, memory]` - contains the total memory, process memory, and all other keys in `erlang:memory/0`
   * `[vm, total_run_queue_lengths]` - returns the run queue lengths for CPU and IO schedulers. It contains the `total`, `cpu` and `io` measurements
-  * `[vm, system_limits]` - returns the current process, atom and port count as per `erlang:system_info/1`
+  * `[vm, system_counts]` - returns the current process, atom and port count as per `erlang:system_info/1`
 
 You can directly consume those events after adding `telemetry_poller` as a dependency.
 
