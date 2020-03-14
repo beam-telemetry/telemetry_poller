@@ -1,6 +1,6 @@
 {application, telemetry_poller,
  [{description, "Periodically collect measurements and dispatch them as Telemetry events."},
-  {vsn, "0.4.1"},
+  {vsn, "0.5.0"},
   {registered, []},
   {mod, {telemetry_poller_app, []}},
   {applications,
