@@ -58,9 +58,19 @@ total_run_queue_lengths() ->
         ProcessCount = erlang:system_info(process_count),
         AtomCount = erlang:system_info(atom_count),
         PortCount = erlang:system_info(port_count),
+        EtsCount = erlang:system_info(ets_count),
+        ProcessLimit = erlang:system_info(process_limit),
+        AtomLimit = erlang:system_info(atom_limit),
+        PortLimit = erlang:system_info(port_limit),
+        EtsCount = erlang:system_info(ets_limit),
         telemetry:execute([vm, system_counts], #{
             process_count => ProcessCount,
             atom_count => AtomCount,
-            port_count => PortCount
+            port_count => PortCount,
+            ets_count => EtsCount,
+            process_limit => ProcessLimit,
+            atom_limit => AtomLimit,
+            port_limit => PortLimit,
+            ets_limit => EtsLimit
         }).
 -endif.
