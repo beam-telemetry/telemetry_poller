@@ -217,7 +217,7 @@
 %%
 %% Useful for starting Pollers as a part of a supervision tree.
 %%
-%% Default options: [{name, telemetry_poller}, {period, 5000}]
+%% Default options: [{name, telemetry_poller}, {period, timer:seconds(5)}]
 -spec start_link(options()) -> gen_server:on_start().
 start_link(Opts) when is_list(Opts) ->
     Args = parse_args(Opts),
@@ -259,7 +259,7 @@ child_spec(Opts) ->
 parse_args(Args) ->
     Measurements = proplists:get_value(measurements, Args, []),
     ParsedMeasurements = parse_measurements(Measurements),
-    Period = proplists:get_value(period, Args, 5000),
+    Period = proplists:get_value(period, Args, timer:seconds(5)),
     validate_period(Period),
     #{measurements => ParsedMeasurements, period => Period}.
 
