@@ -29,7 +29,7 @@ telemetry_poller:start_link(
     {process_info, [{name, my_app_worker}, {event, [my_app, worker]}, {keys, [memory, message_queue_len]}]},
     {example_app_measurements, dispatch_session_count, []}
   ]},
-  {period, 10000}, % configure sampling period - default is 5000
+  {period, timer:seconds(10)}, % configure sampling period - default is timer:seconds(5)
   {name, my_app_poller}
 ]).
 ```
@@ -64,7 +64,7 @@ end
     {:process_info, name: :my_app_worker, event: [:my_app, :worker], keys: [:message, :message_queue_len]},
     {ExampleApp.Measurements, :dispatch_session_count, []},
   ],
-  period: 10_000, # configure sampling period - default is 5_000
+  period: :timer.seconds(10), # configure sampling period - default is :timer.seconds(5)
   name: :my_app_poller
 )
 ```
