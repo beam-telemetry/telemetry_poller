@@ -7,6 +7,7 @@
 
 all() -> [
   accepts_name_opt,
+  accepts_global_name_opt,
   can_configure_sampling_period,
   dispatches_custom_mfa,
   dispatches_memory,
@@ -31,6 +32,12 @@ accepts_name_opt(_Config) ->
   Name = my_poller,
   {ok, Pid} = telemetry_poller:start_link([{name, Name}]),
   FoundPid = erlang:whereis(Name),
+  FoundPid = Pid.
+
+accepts_global_name_opt(_Config) ->
+  Name = my_poller,
+  {ok, Pid} = telemetry_poller:start_link([{name, {global, Name}}]),
+  FoundPid = global:whereis_name(Name),
   FoundPid = Pid.
 
 multiple_unnamed(_Config) ->
@@ -138,3 +145,4 @@ attach_to(Event) ->
   HandlerId = make_ref(),
   telemetry:attach(HandlerId, Event, fun test_handler:echo_event/4, #{caller => erlang:self()}),
   HandlerId.
+

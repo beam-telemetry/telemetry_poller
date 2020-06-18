@@ -223,7 +223,8 @@ start_link(Opts) when is_list(Opts) ->
     Args = parse_args(Opts),
 
     case lists:keyfind(name, 1, Opts) of
-        {name, Name} -> gen_server:start_link({local, Name}, ?MODULE, Args, []);
+        {name, Name} when is_atom(Name) -> gen_server:start_link({local, Name}, ?MODULE, Args, []);
+        {name, Name} -> gen_server:start_link(Name, ?MODULE, Args, []);
         false -> gen_server:start_link(?MODULE, Args, [])
     end.
 
