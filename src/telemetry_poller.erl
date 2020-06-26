@@ -76,7 +76,7 @@
 %% <li>`atom_count' - number of atoms currently existing at the local node</li>
 %% <li>`port_count' - number of ports currently existing at the local node</li>
 %% </ul>
-%% 
+%%
 %% All three measurements are from {@link erlang:system_info/1}.
 %%
 %% == Process info ==
@@ -201,7 +201,7 @@
 -type t() :: gen_server:server().
 -type options() :: [option()].
 -type option() ::
-    {name, gen_server:name()}
+    {name, atom() | {global, atom()}, {via, module(), term()}}
     | {period, period()}
     | {measurements, [measurement()]}.
 -type measurement() ::
