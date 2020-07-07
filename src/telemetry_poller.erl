@@ -201,7 +201,7 @@
 -type t() :: gen_server:server().
 -type options() :: [option()].
 -type option() ::
-    {name, atom() | {global, atom()} | {via, module(), term()}}
+    {name, gen_server:name() | gen_server:server_name()}
     | {period, period()}
     | {measurements, [measurement()]}.
 -type measurement() ::
