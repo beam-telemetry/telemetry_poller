@@ -41,6 +41,9 @@ workflows:
   build_and_test:
     jobs:
       - telemetry_poller/build_and_test:
+          name: "otp-23"
+          version: "23"
+      - telemetry_poller/build_and_test:
           name: "otp-22"
           version: "22"
       - telemetry_poller/build_and_test:
