@@ -54,7 +54,7 @@ jobs:
       with:
         path: |
           _build
-        key: ${{ runner.os }}-build-${{ matrix.otp_version }}-${{ hashFiles('rebar.lock') }}-1
+        key: ${{ runner.os }}-dialyzer-${{ matrix.otp_version }}-${{ hashFiles('rebar.lock') }}-1
         restore-keys: |
           ${{ runner.os }}-dialyzer-${{ matrix.otp_version }}-1-
     - name: Compile
