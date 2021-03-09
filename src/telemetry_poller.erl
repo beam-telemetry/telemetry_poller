@@ -185,6 +185,12 @@
 -export([code_change/3, handle_call/3, handle_cast/2,
      handle_info/2, init/1, terminate/2]).
 
+-export_type([
+              option/0,
+              options/0,
+              measurement/0,
+              period/0]).
+
 -ifdef('OTP_RELEASE').
 -include_lib("kernel/include/logger.hrl").
 -else.
