@@ -103,7 +103,7 @@
 %%     {my_app_example, measure, []}
 %%
 %% The given function will be invoked periodically and they must explicitly invoke
-%% `telemetry:execute/3' function. If the invokation of the MFA fails, the measurement
+%% `telemetry:execute/3' function. If the invocation of the MFA fails, the measurement
 %% is removed from the Poller.
 %%
 %% For all options, see {@link start_link/1}. The options listed there can be given
