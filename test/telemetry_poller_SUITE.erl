@@ -8,6 +8,7 @@
 all() -> [
   accepts_name_opt,
   accepts_global_name_opt,
+  dont_start_when_default_false,
   can_configure_sampling_period,
   dispatches_custom_mfa,
   dispatches_memory,
@@ -22,11 +23,18 @@ all() -> [
 ].
 
 init_per_suite(Config) ->
-    application:ensure_all_started(telemetry_poller),
+    {ok, _} = application:ensure_all_started(telemetry_poller),
     Config.
 
 end_per_suite(_Config) ->
     application:stop(telemetry_poller).
+
+dont_start_when_default_false(_Config) ->
+    application:set_env(telemetry_poller, default, false),
+    true = erlang:is_pid(erlang:whereis(telemetry_poller_default)),
+    ok = application:stop(telemetry_poller),
+    {ok, _} = application:ensure_all_started(telemetry_poller),
+    undefined = erlang:whereis(telemetry_poller_default).
 
 accepts_name_opt(_Config) ->
   Name = my_poller,
@@ -145,4 +153,3 @@ attach_to(Event) ->
   HandlerId = make_ref(),
   telemetry:attach(HandlerId, Event, fun test_handler:echo_event/4, #{caller => erlang:self()}),
   HandlerId.
-
