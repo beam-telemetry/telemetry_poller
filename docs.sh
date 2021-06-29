@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Setup:
+#
+#     $ mix escript.install github elixir-lang/ex_doc
+#     # install OTP 24+
+
 rebar3 as docs compile
 rebar3 as docs edoc
 version=0.5.1
