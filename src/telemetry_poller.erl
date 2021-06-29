@@ -16,9 +16,13 @@
 %% The following measurements are supported:
 %%
 %%  * `memory' (default)
+%%
 %%  * `total_run_queue_lengths' (default)
+%%
 %%  * `system_counts' (default)
+%%
 %%  * `{process_info, Proplist}'
+%%
 %%  * `{Module, Function, Args}'
 %%
 %% We will discuss each measurement in detail. Also note that the
