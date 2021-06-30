@@ -104,11 +104,13 @@
 %% Telemetry poller also allows you to perform custom measurements by passing
 %% a module-function-args tuple:
 %%
-%%     {my_app_example, measure, []}
+%% ```
+%% {my_app_example, measure, []}
+%% '''
 %%
 %% The given function will be invoked periodically and they must explicitly invoke
-%% `telemetry:execute/3' function. If the invocation of the MFA fails, the measurement
-%% is removed from the Poller.
+%% {@link telemetry:execute/3} function. If the invocation of the MFA fails,
+%% the measurement is removed from the Poller.
 %%
 %% For all options, see {@link start_link/1}. The options listed there can be given
 %% to the default poller as well as to custom pollers.
