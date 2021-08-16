@@ -32,6 +32,8 @@ jobs:
         key: ${{ runner.os }}-build-${{ matrix.otp_version }}-${{ hashFiles(format('rebar.lock')) }}-1
         restore-keys: |
           ${{ runner.os }}-build-${{ matrix.otp_version }}-1-
+    - name: Report
+      run: rebar3 report "compile"
     - name: Compile
       run: rebar3 compile
     - name: Common Test tests
