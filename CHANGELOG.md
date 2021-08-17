@@ -8,9 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.0.0](https://github.com/beam-telemetry/telemetry_poller/tree/v1.0.0)
 
 This release marks stability of the API. The library now requires Telemetry ~> 1.0.
+
 ### Fixed
 
 - Fix disabling the default poller via application environment.
+
+### Changed
+
+- Drop support for OTP 20.
 
 ## [0.5.1](https://github.com/beam-telemetry/telemetry_poller/tree/v0.5.1)
 
@@ -44,7 +49,7 @@ keys have been merged into a single `measurements` key for simplicity.
 
 ### Changed
 
-- `vm_measurements` and `measurements`  have been merged into `measurements`
+- `vm_measurements` and `measurements` have been merged into `measurements`
 - `Telemetry.Poller` has been rewritten to `telemetry_poller`
 
 ## [0.3.0](https://github.com/beam-telemetry/telemetry_poller/tree/v0.3.0)
