@@ -1,6 +1,6 @@
 {application, telemetry_poller,
  [{description, "Periodically collect measurements and dispatch them as Telemetry events."},
-  {vsn, "0.5.1"},
+  {vsn, "git"},
   {registered, []},
   {mod, {telemetry_poller_app, []}},
   {applications,
@@ -11,5 +11,6 @@
   {env,[]},
   {modules, []},
   {licenses, ["Apache 2.0"]},
+  {doc, "doc"},
   {links, [{"GitHub", "https://github.com/beam-telemetry/telemetry_poller"}]}
  ]}.
