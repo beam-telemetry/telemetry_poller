@@ -204,6 +204,7 @@
 -type option() ::
     {name, gen_server:name() | gen_server:server_name()}
     | {period, period()}
+    | {initial_delay, initial_delay()}
     | {measurements, [measurement()]}.
 -type measurement() ::
     memory
@@ -212,7 +213,8 @@
     | {process_info, [{name, atom()} | {event, [atom()]} | {keys, [atom()]}]}
     | {module(), atom(), list()}.
 -type period() :: pos_integer().
--type state() :: #{measurements => [measurement()], period => period()}.
+-type initial_delay() :: pos_integer().
+-type state() :: #{measurements => [measurement()], period => period(), initial_delay => initial_delay()}.
 
 %% @doc Starts a poller linked to the calling process.
 %%
@@ -237,10 +239,12 @@ list_measurements(Poller) ->
 
 -spec init(map()) -> {ok, state()}.
 init(Args) ->
-    schedule_measurement(0),
+    InitialDelay = maps:get(initial_delay, Args),
+    schedule_measurement(InitialDelay),
     {ok, #{
         measurements => maps:get(measurements, Args),
-        period => maps:get(period, Args)}}.
+        period => maps:get(period, Args),
+        initial_delay => InitialDelay}}.
 
 %% @doc
 %% Returns a child spec for the poller for running under a supervisor.
@@ -262,8 +266,10 @@ parse_args(Args) ->
     Measurements = proplists:get_value(measurements, Args, []),
     ParsedMeasurements = parse_measurements(Measurements),
     Period = proplists:get_value(period, Args, timer:seconds(5)),
+    InitialDelay = proplists:get_value(initial_delay, Args, timer:seconds(0)),
     validate_period(Period),
-    #{measurements => ParsedMeasurements, period => Period}.
+    validate_initial_delay(InitialDelay),
+    #{measurements => ParsedMeasurements, period => Period, initial_delay => InitialDelay}.
 
 -spec schedule_measurement(non_neg_integer()) -> ok.
 schedule_measurement(CollectInMillis) ->
@@ -274,6 +280,12 @@ validate_period(Period) when is_integer(Period), Period > 0 ->
     ok;
 validate_period(Term) ->
     erlang:error({badarg, "Expected period to be a positive integer"}, [Term]).
+
+-spec validate_initial_delay(term()) -> ok | no_return().
+validate_initial_delay(InitialDelay) when is_integer(InitialDelay), InitialDelay >= 0 ->
+    ok;
+validate_initial_delay(Term) ->
+    erlang:error({badarg, "Expected initial_delay to be a positive integer"}, [Term]).
 
 -spec parse_measurements([measurement()]) -> [{module(), atom(), list()}].
 parse_measurements(Measurements) when is_list(Measurements) ->

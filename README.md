@@ -29,6 +29,7 @@ telemetry_poller:start_link(
     {example_app_measurements, dispatch_session_count, []}
   ]},
   {period, timer:seconds(10)}, % configure sampling period - default is timer:seconds(5)
+  {initial_delay, timer:seconds(5)}, % configure initial delay - default is timer:seconds(0), i.e. no initial delay
   {name, my_app_poller}
 ]).
 ```
@@ -64,6 +65,7 @@ end
     {ExampleApp.Measurements, :dispatch_session_count, []},
   ],
   period: :timer.seconds(10), # configure sampling period - default is :timer.seconds(5)
+  initial_delay: :timer.seconds(5), # configure initial delay - default is :timer.seconds(0)
   name: :my_app_poller
 )
 ```

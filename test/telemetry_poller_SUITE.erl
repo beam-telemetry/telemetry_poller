@@ -10,6 +10,7 @@ all() -> [
   accepts_global_name_opt,
   dont_start_when_default_false,
   can_configure_sampling_period,
+  can_configure_initial_delay,
   dispatches_custom_mfa,
   dispatches_memory,
   dispatches_process_info,
@@ -17,6 +18,7 @@ all() -> [
   dispatches_total_run_queue_lengths,
   doesnt_start_given_invalid_measurements,
   doesnt_start_given_invalid_period,
+  doesnt_start_given_invalid_inital_delay,
   measurements_can_be_listed,
   measurement_removed_if_it_raises,
   multiple_unnamed
@@ -59,12 +61,21 @@ can_configure_sampling_period(_Config) ->
   State = sys:get_state(Pid),
   Period = maps:get(period, State).
 
+can_configure_initial_delay(_Config) ->
+  InitialDelay = 500,
+  {ok, Pid} = telemetry_poller:start_link([{measurements, []}, {initial_delay, InitialDelay}]),
+  State = sys:get_state(Pid),
+  InitialDelay = maps:get(initial_delay, State).
+
 doesnt_start_given_invalid_period(_Config) ->
   ?assertError({badarg, "Expected period to be a positive integer"},  telemetry_poller:start_link([{measurements, []}, {period, "1"}])).
 
 doesnt_start_given_invalid_measurements(_Config) ->
   ?assertError({badarg, "Expected measurement " ++ _}, telemetry_poller:start_link([{measurements, [invalid_measurement]}])),
   ?assertError({badarg, "Expected measurements to be a list"}, telemetry_poller:start_link([{measurements, {}}])).
+
+doesnt_start_given_invalid_inital_delay(_Config) ->
+  ?assertError({badarg, "Expected initial_delay to be a positive integer"},  telemetry_poller:start_link([{measurements, []}, {initial_delay, "1"}])).
 
 measurements_can_be_listed(_Config) ->
   Measurement1 = {telemetry_poller_builtin, memory, []},
