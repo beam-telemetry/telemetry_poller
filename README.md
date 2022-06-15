@@ -45,7 +45,24 @@ dispatch_session_count() ->
 
 ### Elixir
 
-First define the poller with the custom measurements. The first measurement is the built-in `process_info` measurement and the second one is given by a custom module-function-args defined  by you:
+You typically start the poller as a child in your supervision tree:
+
+```elixir
+children = [
+  {:telemetry_poller,
+   # include custom measurement as an MFA tuple
+   measurements: [
+     {:process_info, name: :my_app_worker, event: [:my_app, :worker], keys: [:memory, :message_queue_len]},
+     {ExampleApp.Measurements, :dispatch_session_count, []},
+   ],
+   period: :timer.seconds(10), # configure sampling period - default is :timer.seconds(5)
+   name: :my_app_poller}
+]
+
+Supervisor.start_link(children, strategy: :one_for_one)
+```
+
+The poller above has two periodic measurements. The first is the built-in `process_info` measurement that will gather the memory and message queue length of a process. The second is given by a custom module-function-args defined by you, such as below:
 
 ```elixir
 defmodule ExampleApp.Measurements do
@@ -54,18 +71,6 @@ defmodule ExampleApp.Measurements do
     :telemetry.execute([:example_app, :session_count], %{count: ExampleApp.session_count()}, %{})
   end
 end
-```
-
-```elixir
-:telemetry_poller.start_link(
-  # include custom measurement as an MFA tuple
-  measurements: [
-    {:process_info, name: :my_app_worker, event: [:my_app, :worker], keys: [:message, :message_queue_len]},
-    {ExampleApp.Measurements, :dispatch_session_count, []},
-  ],
-  period: :timer.seconds(10), # configure sampling period - default is :timer.seconds(5)
-  name: :my_app_poller
-)
 ```
 
 ## Documentation
