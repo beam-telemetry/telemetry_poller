@@ -212,7 +212,7 @@
     | {process_info, [{name, atom()} | {event, [atom()]} | {keys, [atom()]}]}
     | {module(), atom(), list()}.
 -type period() :: pos_integer().
--type state() :: #{measurements => [measurement()], period => period()}.
+-type state() :: #{measurements => [measurement()], period => period(), filter_misbehaving => boolean()}.
 
 %% @doc Starts a poller linked to the calling process.
 %%
@@ -240,7 +240,8 @@ init(Args) ->
     schedule_measurement(0),
     {ok, #{
         measurements => maps:get(measurements, Args),
-        period => maps:get(period, Args)}}.
+        period => maps:get(period, Args),
+        filter_misbehaving => maps:get(filter_misbehaving, Args, true)}}.
 
 %% @doc
 %% Returns a child spec for the poller for running under a supervisor.
@@ -262,8 +263,13 @@ parse_args(Args) ->
     Measurements = proplists:get_value(measurements, Args, []),
     ParsedMeasurements = parse_measurements(Measurements),
     Period = proplists:get_value(period, Args, timer:seconds(5)),
+    FilterMisbehaving = proplists:get_value(filter_misbehaving, Args, true),
     validate_period(Period),
-    #{measurements => ParsedMeasurements, period => Period}.
+    #{
+        measurements => ParsedMeasurements,
+        period => Period,
+        filter_misbehaving => FilterMisbehaving
+    }.
 
 -spec schedule_measurement(non_neg_integer()) -> ok.
 schedule_measurement(CollectInMillis) ->
@@ -317,6 +323,11 @@ parse_measurement(Term) ->
 make_measurements_and_filter_misbehaving(Measurements) ->
     [Measurement || Measurement <- Measurements, make_measurement(Measurement) =/= error].
 
+-spec make_measurements(measurement()) -> [measurement()].
+make_measurements(Measurements) ->
+    lists:foreach(fun make_measurement/1, Measurements),
+    Measurements.
+
 -spec make_measurement(measurement()) -> measurement() | no_return().
 make_measurement(Measurement = {M, F, A}) ->
     try erlang:apply(M, F, A) of
@@ -337,9 +348,16 @@ handle_call(_Request, _From, State) ->
 handle_cast(_Msg, State) -> {noreply, State}.
 
 handle_info(collect, State) ->
-    GoodMeasurements = make_measurements_and_filter_misbehaving(maps:get(measurements, State)),
+    FilterMisbehaving = maps:get(filter_misbehaving, State),
+    Measurements = maps:get(measurements, State),
+    NewMeasurements = case FilterMisbehaving of
+        true ->
+            make_measurements_and_filter_misbehaving(Measurements);
+        false ->
+            make_measurements(Measurements)
+    end,
     schedule_measurement(maps:get(period, State)),
-    {noreply, State#{measurements := GoodMeasurements}};
+    {noreply, State#{measurements := NewMeasurements}};
 handle_info(_, State) ->
     {noreply, State}.
 

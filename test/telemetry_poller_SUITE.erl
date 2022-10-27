@@ -19,6 +19,7 @@ all() -> [
   doesnt_start_given_invalid_period,
   measurements_can_be_listed,
   measurement_removed_if_it_raises,
+  filter_misbehaving_can_be_disabled,
   multiple_unnamed
 ].
 
@@ -77,6 +78,12 @@ measurement_removed_if_it_raises(_Config) ->
   {ok, Poller} = telemetry_poller:start_link([{measurements, [InvalidMeasurement]},{period, 100}]),
   ct:sleep(200),
   ?assert([] =:= telemetry_poller:list_measurements(Poller)).
+
+filter_misbehaving_can_be_disabled(_Config) ->
+  InvalidMeasurement = {test_measure, raise, []},
+  {ok, Poller} = telemetry_poller:start_link([{measurements, [InvalidMeasurement]},{period, 100},{filter_misbehaving, false}]),
+  ct:sleep(200),
+  ?assert([{test_measure, raise, []}] =:= telemetry_poller:list_measurements(Poller)).
 
 dispatches_custom_mfa(_Config) ->
   Event = [a, test, event],
