@@ -100,11 +100,9 @@ mentioned above.
 
 To see it in action, first compile the Erlang sources with `rebar3 compile`.
 
-Then fire up `iex`, then
+Then fire up `iex -pa "_build/default/lib/*/ebin"`, then
 
 ```elixir
-true = Code.append_path("_build/default/lib/telemetry_poller/ebin")
-true = Code.append_path("_build/default/lib/telemetry/ebin")
 {:ok, _} = Application.ensure_all_started(:telemetry_poller)
 
 [TelemetryPollerVM] = c("examples/TelemetryPollerVM.ex")
