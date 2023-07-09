@@ -78,6 +78,37 @@ end
 See [documentation](https://hexdocs.pm/telemetry_poller/) for more concrete examples and usage
 instructions.
 
+## VM metrics example
+
+### Erlang
+
+Find, in `examples/telemetry_poller_vm.erl`, an example on how to retrieve to VM measurements,
+mentioned above.
+
+To see it in action, fire up `rebar3 shell`, then
+
+```erlang
+{ok, telemetry_poller_vm} = c("examples/telemetry_poller_vm").
+ok = file:delete("telemetry_poller_vm.beam").  % Deletes generated BEAM
+ok = telemetry_poller_vm:attach().
+```
+
+### Elixir
+
+Find, in `examples/TelemetryPollerVM.ex`, an example on how to retrieve to VM measurements,
+mentioned above.
+
+To see it in action, first compile the Erlang sources with `rebar3 compile`.
+
+Then fire up `iex -pa "_build/default/lib/*/ebin"`, then
+
+```elixir
+{:ok, _} = Application.ensure_all_started(:telemetry_poller)
+
+[TelemetryPollerVM] = c("examples/TelemetryPollerVM.ex")
+:ok = TelemetryPollerVM.attach()
+```
+
 ## Copyright and License
 
 telemetry_poller is copyright (c) 2018 Chris McCord and Erlang Solutions.

@@ -199,10 +199,10 @@
 
 -include_lib("kernel/include/logger.hrl").
 
--type t() :: gen_server:server().
+-type t() :: gen_server:server_ref().
 -type options() :: [option()].
 -type option() ::
-    {name, gen_server:name() | gen_server:server_name()}
+    {name, atom() | gen_server:server_name()}
     | {period, period()}
     | {measurements, [measurement()]}.
 -type measurement() ::
@@ -219,7 +219,7 @@
 %% Useful for starting Pollers as a part of a supervision tree.
 %%
 %% Default options: [{name, telemetry_poller}, {period, timer:seconds(5)}]
--spec start_link(options()) -> gen_server:on_start().
+-spec start_link(options()) -> gen_server:start_ret().
 start_link(Opts) when is_list(Opts) ->
     Args = parse_args(Opts),
 
