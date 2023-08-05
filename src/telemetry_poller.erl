@@ -4,12 +4,15 @@
 %%
 %% A poller is a process start in your supervision tree with a list
 %% of measurements to perform periodically. On start it expects the
-%% period in milliseconds and a list of measurements to perform:
+%% period in milliseconds and a list of measurements to perform. Initial delay
+%% is an optional parameter that sets time delay in milliseconds before starting
+%% measurements:
 %%
 %% ```
 %% telemetry_poller:start_link([
 %%   {measurements, Measurements},
-%%   {period, Period}
+%%   {period, Period},
+%%   {init_delay, InitDelay}
 %% ])
 %% '''
 %%
@@ -204,6 +207,7 @@
 -type option() ::
     {name, atom() | gen_server:server_name()}
     | {period, period()}
+    | {init_delay, init_delay()}
     | {measurements, [measurement()]}.
 -type measurement() ::
     memory
@@ -212,13 +216,14 @@
     | {process_info, [{name, atom()} | {event, [atom()]} | {keys, [atom()]}]}
     | {module(), atom(), list()}.
 -type period() :: pos_integer().
+-type init_delay() :: non_neg_integer().
 -type state() :: #{measurements => [measurement()], period => period()}.
 
 %% @doc Starts a poller linked to the calling process.
 %%
 %% Useful for starting Pollers as a part of a supervision tree.
 %%
-%% Default options: [{name, telemetry_poller}, {period, timer:seconds(5)}]
+%% Default options: [{name, telemetry_poller}, {period, timer:seconds(5)}, {init_delay, 0}]
 -spec start_link(options()) -> gen_server:start_ret().
 start_link(Opts) when is_list(Opts) ->
     Args = parse_args(Opts),
@@ -237,7 +242,7 @@ list_measurements(Poller) ->
 
 -spec init(map()) -> {ok, state()}.
 init(Args) ->
-    schedule_measurement(0),
+    schedule_measurement(maps:get(init_delay, Args)),
     {ok, #{
         measurements => maps:get(measurements, Args),
         period => maps:get(period, Args)}}.
@@ -260,20 +265,29 @@ child_spec(Opts) ->
 
 parse_args(Args) ->
     Measurements = proplists:get_value(measurements, Args, []),
-    ParsedMeasurements = parse_measurements(Measurements),
     Period = proplists:get_value(period, Args, timer:seconds(5)),
-    validate_period(Period),
-    #{measurements => ParsedMeasurements, period => Period}.
+    InitDelay = proplists:get_value(init_delay, Args, 0),
+    #{
+        measurements => parse_measurements(Measurements),
+        period => validate_period(Period),
+        init_delay => validate_init_delay(InitDelay)
+    }.
 
 -spec schedule_measurement(non_neg_integer()) -> ok.
 schedule_measurement(CollectInMillis) ->
     erlang:send_after(CollectInMillis, self(), collect), ok.
 
--spec validate_period(term()) -> ok | no_return().
+-spec validate_period(term()) -> period() | no_return().
 validate_period(Period) when is_integer(Period), Period > 0 ->
-    ok;
+    Period;
 validate_period(Term) ->
     erlang:error({badarg, "Expected period to be a positive integer"}, [Term]).
+
+-spec validate_init_delay(term()) -> init_delay() | no_return().
+validate_init_delay(InitDelay) when is_integer(InitDelay), InitDelay >= 0 ->
+    InitDelay;
+validate_init_delay(Term) ->
+    erlang:error({badarg, "Expected init_delay to be 0 or a positive integer"}, [Term]).
 
 -spec parse_measurements([measurement()]) -> [{module(), atom(), list()}].
 parse_measurements(Measurements) when is_list(Measurements) ->
