@@ -17,6 +17,7 @@ all() -> [
   dispatches_total_run_queue_lengths,
   doesnt_start_given_invalid_measurements,
   doesnt_start_given_invalid_period,
+  doesnt_start_given_invalid_init_delay,
   measurements_can_be_listed,
   measurement_removed_if_it_raises,
   multiple_unnamed
@@ -55,12 +56,16 @@ multiple_unnamed(_Config) ->
 
 can_configure_sampling_period(_Config) ->
   Period = 500,
-  {ok, Pid} = telemetry_poller:start_link([{measurements, []}, {period, Period}]),
+  {ok, Pid} = telemetry_poller:start_link([{measurements, []}, {period, Period}, {init_delay, 0}]),
   State = sys:get_state(Pid),
   Period = maps:get(period, State).
 
 doesnt_start_given_invalid_period(_Config) ->
   ?assertError({badarg, "Expected period to be a positive integer"},  telemetry_poller:start_link([{measurements, []}, {period, "1"}])).
+
+doesnt_start_given_invalid_init_delay(_Config) ->
+  ?assertError({badarg, "Expected init_delay to be 0 or a positive integer"},
+               telemetry_poller:start_link([{measurements, []}, {init_delay, "1"}])).
 
 doesnt_start_given_invalid_measurements(_Config) ->
   ?assertError({badarg, "Expected measurement " ++ _}, telemetry_poller:start_link([{measurements, [invalid_measurement]}])),
