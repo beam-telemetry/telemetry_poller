@@ -113,7 +113,7 @@ Then fire up `iex -pa "_build/default/lib/*/ebin"`, then
 
 ## Copyright and License
 
-telemetry_poller is copyright (c) 2018 Chris McCord and Erlang Solutions.
+Copyright (c) 2019 Erlang Ecosystem Foundation and Erlang Solutions.
 
 telemetry_poller source code is released under Apache License, Version 2.0.
 
