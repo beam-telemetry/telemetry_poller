@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/beam-telemetry/telemetry_poller/tree/v1.1.0)
+
+### Added
+
+- Add the `init_delay` configuration option. (#70)
+
 ## [1.0.0](https://github.com/beam-telemetry/telemetry_poller/tree/v1.0.0)
 
 This release marks stability of the API. The library now requires Telemetry ~> 1.0.
