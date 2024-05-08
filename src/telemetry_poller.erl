@@ -325,7 +325,7 @@ parse_measurement({process_info, List}) when is_list(List) ->
 parse_measurement({M, F, A}) when is_atom(M), is_atom(F), is_list(A) ->
     {M, F, A};
 parse_measurement(Term) ->
-    erlang:error({badarg, "Expected measurement to be memory, total_run_queue_lenths, {process_info, list()}, or a {module(), function(), list()} tuple"}, [Term]).
+    erlang:error({badarg, "Expected measurement to be memory, total_run_queue_lengths, {process_info, list()}, or a {module(), function(), list()} tuple"}, [Term]).
 
 -spec make_measurements_and_filter_misbehaving([measurement()]) -> [measurement()].
 make_measurements_and_filter_misbehaving(Measurements) ->
