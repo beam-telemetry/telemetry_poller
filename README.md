@@ -1,5 +1,6 @@
 # telemetry_poller
 
+[![Test](https://github.com/kianmeng/telemetry_poller/actions/workflows/test.yml/badge.svg)](https://github.com/kianmeng/telemetry_poller/actions/workflows/test.yml)
 [![Codecov](https://codecov.io/gh/beam-telemetry/telemetry_poller/branch/master/graphs/badge.svg)](https://codecov.io/gh/beam-telemetry/telemetry_poller/branch/master/graphs/badge.svg)
 
 Allows to periodically collect measurements and dispatch them as Telemetry events.
