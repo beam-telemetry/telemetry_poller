@@ -13,7 +13,12 @@ start(_StartType, _StartArgs) ->
             PollerOpts ->
                 Default = #{
                             name => telemetry_poller_default,
-                            measurements => [memory, total_run_queue_lengths, system_counts]
+                            measurements => [
+                                memory,
+                                total_run_queue_lengths,
+                                system_counts,
+                                persistent_term
+                            ]
                            },
                 FinalOpts = maps:to_list(maps:merge(Default, maps:from_list(PollerOpts))),
                 [telemetry_poller:child_spec(FinalOpts)]

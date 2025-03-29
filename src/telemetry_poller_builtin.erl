@@ -5,6 +5,7 @@
   memory/0,
   total_run_queue_lengths/0,
   system_counts/0,
+  persistent_term/0,
   process_info/3
 ]).
 
@@ -65,3 +66,8 @@ total_run_queue_lengths() ->
             port_count => PortCount
         }).
 -endif.
+
+-spec persistent_term() -> ok.
+persistent_term() ->
+    Info = persistent_term:info(),
+    telemetry:execute([vm, persistent_term], Info, #{}).

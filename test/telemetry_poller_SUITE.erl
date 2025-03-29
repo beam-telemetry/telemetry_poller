@@ -12,6 +12,7 @@ all() -> [
   can_configure_sampling_period,
   dispatches_custom_mfa,
   dispatches_memory,
+  dispatches_persistent_term,
   dispatches_process_info,
   dispatches_system_counts,
   dispatches_total_run_queue_lengths,
@@ -147,6 +148,22 @@ dispatches_process_info(_Config) ->
   HandlerId = attach_to([my_app, user]),
   receive
     {event, [my_app, user], #{memory := _, message_queue_len := _}, #{name := user}} ->
+      telemetry:detach(HandlerId),
+      ?assert(true)
+  after
+      1000 ->
+          ct:fail(timeout_receive_echo)
+  end.
+
+dispatches_persistent_term(_Config) ->
+  {ok, _Poller} = telemetry_poller:start_link([{measurements, [persistent_term]}, {period, 100}]),
+  HandlerId = attach_to([vm, persistent_term]),
+  receive
+    {event, [vm, persistent_term], #{count := Count, memory := Memory}, _} ->
+      ?assert(is_integer(Count)),
+      ?assert(Count >= 0),
+      ?assert(is_integer(Memory)),
+      ?assert(Memory >= 0),
       telemetry:detach(HandlerId),
       ?assert(true)
   after
