@@ -48,12 +48,13 @@ The following measurements are supported:
   * `memory` (default)
   * `total_run_queue_lengths` (default)
   * `system_counts` (default)
+  * `persistent_term` (default)
   * `{process_info, Proplist}`
   * `{Module, Function, Args}`
 
 We will discuss each measurement in detail. Also note that the
 `telemetry_poller` application ships with a built-in poller that
-measures `memory`, `total_run_queue_lengths` and `system_counts`. This takes
+measures `memory`, `total_run_queue_lengths`, `system_counts`, and `persistent_term`. This takes
 the VM measurement out of the way so your application can focus
 on what is specific to its behaviour.
 
@@ -82,6 +83,14 @@ The measurement includes:
   * `process_count` - the number of processes currently existing at the local node
   * `atom_count` - the number of atoms currently existing at the local node
   * `port_count` - the number of ports currently existing at the local node
+
+### Persistent term (since 1.2.0)
+
+An event emitted as `[vm, persistent_term]`. The measurement includes information
+about persistent terms in the system, as returned by `persistent_term:info/0`:
+
+  * `count` - The number of persistent terms
+  * `memory` - The total amount of memory (measured in bytes) used by all persistent terms
 
 ### Process info
 
@@ -315,6 +324,7 @@ A measurement for the poller.
     memory
     | total_run_queue_lengths
     | system_counts
+    | persistent_term
     | {process_info, [{name, atom()} | {event, [atom()]} | {keys, [atom()]}]}
     | {module(), atom(), list()}.
 
@@ -425,6 +435,8 @@ parse_measurement(total_run_queue_lengths) ->
     {telemetry_poller_builtin, total_run_queue_lengths, []};
 parse_measurement(system_counts) ->
     {telemetry_poller_builtin, system_counts, []};
+parse_measurement(persistent_term) ->
+    {telemetry_poller_builtin, persistent_term, []};
 parse_measurement({process_info, List}) when is_list(List) ->
     Name = case proplists:get_value(name, List) of
         undefined -> erlang:error({badarg, "Expected `name' key to be given under process_info measurement"});
