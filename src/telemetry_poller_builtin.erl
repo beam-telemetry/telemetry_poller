@@ -35,37 +35,22 @@ total_run_queue_lengths() ->
         io => Total - CPU},
         #{}).
 
--ifdef(OTP19).
-    -spec cpu_stats(total | cpu) -> non_neg_integer().
-    cpu_stats(_) ->
-        lists:sum(erlang:statistics(run_queue_lengths)).
+-spec cpu_stats(total | cpu) -> non_neg_integer().
+cpu_stats(total) ->
+    erlang:statistics(total_run_queue_lengths_all);
+cpu_stats(cpu) ->
+    erlang:statistics(total_run_queue_lengths).
 
-    -spec system_counts() -> ok.
-    system_counts() ->
-        ProcessCount = erlang:system_info(process_count),
-        PortCount = erlang:system_info(port_count),
-        telemetry:execute([vm, system_counts], #{
-            process_count => ProcessCount,
-            port_count => PortCount
-        }).
--else.
-    -spec cpu_stats(total | cpu) -> non_neg_integer().
-    cpu_stats(total) ->
-        erlang:statistics(total_run_queue_lengths_all);
-    cpu_stats(cpu) ->
-        erlang:statistics(total_run_queue_lengths).
-
-    -spec system_counts() -> ok.
-    system_counts() ->
-        ProcessCount = erlang:system_info(process_count),
-        AtomCount = erlang:system_info(atom_count),
-        PortCount = erlang:system_info(port_count),
-        telemetry:execute([vm, system_counts], #{
-            process_count => ProcessCount,
-            atom_count => AtomCount,
-            port_count => PortCount
-        }).
--endif.
+-spec system_counts() -> ok.
+system_counts() ->
+    ProcessCount = erlang:system_info(process_count),
+    AtomCount = erlang:system_info(atom_count),
+    PortCount = erlang:system_info(port_count),
+    telemetry:execute([vm, system_counts], #{
+        process_count => ProcessCount,
+        atom_count => AtomCount,
+        port_count => PortCount
+    }).
 
 -spec persistent_term() -> ok.
 persistent_term() ->

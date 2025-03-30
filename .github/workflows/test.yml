@@ -14,7 +14,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        otp_version: [24, 25, 26, 27]
+        otp_version: [25, 26, 27]
         os: [ubuntu-latest]
     env:
       OTP_VERSION: ${{ matrix.otp_version }}
