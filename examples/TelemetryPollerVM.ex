@@ -64,7 +64,10 @@ defmodule TelemetryPollerVM do
         "-------------\n" <>
         "  atom_count: #{event_measurements.atom_count}\n" <>
         "  port_count: #{event_measurements.port_count}\n" <>
-        "  process_count: #{event_measurements.process_count}\n"
+        "  process_count: #{event_measurements.process_count}\n" <>
+        "  atom_limit: #{event_measurements.atom_limit}\n" <>
+        "  port_limit: #{event_measurements.port_limit}\n" <>
+        "  process_limit: #{event_measurements.process_limit}\n"
     )
   end
 end

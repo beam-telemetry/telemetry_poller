@@ -83,6 +83,9 @@ The measurement includes:
   * `process_count` - the number of processes currently existing at the local node
   * `atom_count` - the number of atoms currently existing at the local node
   * `port_count` - the number of ports currently existing at the local node
+  * `process_limit` - the maximum number of processes allowed at the local node
+  * `atom_limit` - the maximum number of atoms allowed at the local node
+  * `port_limit` - the maximum number of ports allowed at the local node
 
 ### Persistent term (since 1.2.0)
 
