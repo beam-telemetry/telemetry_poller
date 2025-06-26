@@ -77,7 +77,10 @@ handle([vm, system_counts], EventMeasurements, _EventMetadata, _HandlerConfig) -
     #{
         atom_count := AtomCount,
         port_count := PortCount,
-        process_count := ProcessCount
+        process_count := ProcessCount,
+        atom_limit := AtomLimit,
+        port_limit := PortLimit,
+        process_limit := ProcessLimit
     } = EventMeasurements,
     % Do something with the measurements
     io:format(
@@ -85,10 +88,16 @@ handle([vm, system_counts], EventMeasurements, _EventMetadata, _HandlerConfig) -
         "-------------~n"
         "  atom_count: ~p~n"
         "  port_count: ~p~n"
-        "  process_count: ~p~n~n",
+        "  process_count: ~p~n"
+        "  atom_limit: ~p~n"
+        "  port_limit: ~p~n"
+        "  process_limit: ~p~n~n",
         [
             AtomCount,
             PortCount,
-            ProcessCount
+            ProcessCount,
+            AtomLimit,
+            PortLimit,
+            ProcessLimit
         ]
     ).

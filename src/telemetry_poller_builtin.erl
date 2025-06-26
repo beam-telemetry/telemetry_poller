@@ -46,10 +46,16 @@ system_counts() ->
     ProcessCount = erlang:system_info(process_count),
     AtomCount = erlang:system_info(atom_count),
     PortCount = erlang:system_info(port_count),
+    ProcessLimit = erlang:system_info(process_limit),
+    AtomLimit = erlang:system_info(atom_limit),
+    PortLimit = erlang:system_info(port_limit),
     telemetry:execute([vm, system_counts], #{
         process_count => ProcessCount,
         atom_count => AtomCount,
-        port_count => PortCount
+        port_count => PortCount,
+        process_limit => ProcessLimit,
+        atom_limit => AtomLimit,
+        port_limit => PortLimit
     }).
 
 -spec persistent_term() -> ok.

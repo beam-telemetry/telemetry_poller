@@ -128,7 +128,8 @@ dispatches_system_counts(_Config) ->
   {ok, _Poller} = telemetry_poller:start_link([{measurements, [system_counts]},{period, 100}]),
   HandlerId = attach_to([vm, system_counts]),
   receive
-    {event, [vm, system_counts], #{process_count := _, atom_count := _, port_count := _}, _} ->
+    {event, [vm, system_counts], #{process_count := _, atom_count := _, port_count := _,
+                                   process_limit := _, atom_limit := _, port_limit := _}, _} ->
       telemetry:detach(HandlerId),
       ?assert(true)
   after
