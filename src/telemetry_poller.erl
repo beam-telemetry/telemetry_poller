@@ -399,6 +399,7 @@ child_spec(Opts) ->
         start => {telemetry_poller, start_link, [Opts]}
     }.
 
+-spec parse_args(options()) -> map().
 parse_args(Args) ->
     Measurements = proplists:get_value(measurements, Args, []),
     Period = proplists:get_value(period, Args, timer:seconds(5)),
@@ -469,7 +470,7 @@ parse_measurement(Term) ->
 make_measurements_and_filter_misbehaving(Measurements) ->
     [Measurement || Measurement <- Measurements, make_measurement(Measurement) =/= error].
 
--spec make_measurement(measurement()) -> measurement() | no_return().
+-spec make_measurement(measurement()) -> measurement() | error.
 make_measurement(Measurement = {M, F, A}) ->
     try erlang:apply(M, F, A) of
         _ -> Measurement
@@ -482,15 +483,18 @@ make_measurement(Measurement = {M, F, A}) ->
     end.
 
 ?DOC(false).
+-spec handle_call(term(), gen_server:from(), state()) -> {reply, term(), state()}.
 handle_call(get_measurements, _From, State = #{measurements := Measurements}) ->
     {reply, Measurements, State};
 handle_call(_Request, _From, State) ->
     {reply, ok, State}.
 
 ?DOC(false).
+-spec handle_cast(term(), state()) -> {noreply, state()}.
 handle_cast(_Msg, State) -> {noreply, State}.
 
 ?DOC(false).
+-spec handle_info(term(), state()) -> {noreply, state()}.
 handle_info(collect, State) ->
     GoodMeasurements = make_measurements_and_filter_misbehaving(maps:get(measurements, State)),
     schedule_measurement(maps:get(period, State)),
@@ -499,7 +503,9 @@ handle_info(_, State) ->
     {noreply, State}.
 
 ?DOC(false).
+-spec terminate(term(), state()) -> ok.
 terminate(_Reason, _State) -> ok.
 
 ?DOC(false).
+-spec code_change(term(), state(), term()) -> {ok, state()}.
 code_change(_OldVsn, State, _Extra) -> {ok, State}.

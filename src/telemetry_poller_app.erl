@@ -5,6 +5,7 @@
 
 -export([start/2, stop/1]).
 
+-spec start(application:start_type(), term()) -> {ok, pid()}.
 start(_StartType, _StartArgs) ->
     PollerChildSpec =
         case application:get_env(telemetry_poller, default, []) of
@@ -25,5 +26,6 @@ start(_StartType, _StartArgs) ->
         end,
     telemetry_poller_sup:start_link(PollerChildSpec).
 
+-spec stop(term()) -> ok.
 stop(_State) ->
     ok.
